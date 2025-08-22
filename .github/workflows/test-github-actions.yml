@@ -55,7 +55,7 @@ jobs:
         echo "- GitHub Actions: Working" >> test-report.md
         
     - name: Upload test report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: github-actions-test-report
         path: test-report.md

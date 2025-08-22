@@ -73,7 +73,7 @@ jobs:
         reportgenerator -reports:TestResults/**/*.coverage -targetdir:CoverageReport -reporttypes:Html,Cobertura
     
     - name: Upload coverage reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: coverage-reports
         path: |
@@ -95,7 +95,7 @@ jobs:
         dotnet-version: ${{ env.DOTNET_VERSION }}
     
     - name: Download coverage reports
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: coverage-reports
         path: TestResults/
@@ -129,7 +129,7 @@ jobs:
         echo "Timestamp: $(date)" >> quality-report.txt
     
     - name: Upload quality report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: quality-report
         path: quality-report.txt
@@ -159,7 +159,7 @@ jobs:
         echo "Timestamp: $(date)" >> monitoring-report.txt
     
     - name: Upload monitoring report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: monitoring-report
         path: monitoring-report.txt
@@ -188,7 +188,7 @@ jobs:
         echo "Timestamp: $(date)" >> security-report.txt
     
     - name: Upload security report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: security-report
         path: security-report.txt
@@ -218,7 +218,7 @@ jobs:
         echo "Timestamp: $(date)" >> performance-report.txt
     
     - name: Upload performance report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: performance-report
         path: performance-report.txt
@@ -243,7 +243,7 @@ jobs:
         dotnet publish ${{ env.SOLUTION_FILE }} --configuration Release --output ./publish
     
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: published-app
         path: ./publish
@@ -273,7 +273,7 @@ jobs:
         dotnet publish ${{ env.SOLUTION_FILE }} --configuration Release --output ./publish
     
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: published-app
         path: ./publish

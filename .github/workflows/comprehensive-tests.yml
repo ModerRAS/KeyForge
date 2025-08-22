@@ -121,7 +121,7 @@ jobs:
         fi
           
     - name: 上传测试结果
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: test-results
@@ -138,7 +138,7 @@ jobs:
         reporter: dotnet-trx
         
     - name: 发布覆盖率报告
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: coverage-reports
         path: TestReports/
@@ -226,7 +226,7 @@ jobs:
         EOF
         
     - name: 上传质量报告
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: quality-report
         path: TestResults/quality-report.md

@@ -50,7 +50,7 @@ jobs:
         stylecop.console ${{ env.SOLUTION_FILE }} --output TestResults/CodeQuality/stylecop.json
         
     - name: Upload Code Quality Results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: code-quality-results
         path: TestResults/CodeQuality/
@@ -86,7 +86,7 @@ jobs:
         head: HEAD
         
     - name: Upload Security Results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: security-results
         path: TestResults/Security/
@@ -122,7 +122,7 @@ jobs:
         memory-leak-detector --project ${{ env.SOLUTION_FILE }} --output TestResults/Performance/memory.json
         
     - name: Upload Performance Results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: performance-results
         path: TestResults/Performance/
@@ -154,7 +154,7 @@ jobs:
         echo "DOCUMENTATION_COVERAGE=$coverage" >> $GITHUB_ENV
         
     - name: Upload Documentation
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: documentation
         path: TestResults/Documentation/
@@ -191,7 +191,7 @@ jobs:
         $gdprIssues | Out-File -FilePath TestResults/Compliance/gdpr.json
         
     - name: Upload Compliance Results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: compliance-results
         path: TestResults/Compliance/
@@ -203,7 +203,7 @@ jobs:
     
     steps:
     - name: Download all artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       
     - name: Evaluate Quality Gate
       run: |
@@ -251,7 +251,7 @@ jobs:
         echo "QUALITY_GATE_PASSED=$qualityGate" >> $GITHUB_ENV
         
     - name: Upload Quality Gate Results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: quality-gate-results
         path: |
