@@ -1,0 +1,282 @@
+{
+  "SecurityTestSettings": {
+    "AuthenticationTests": {
+      "TestPasswordComplexity": true,
+      "TestAccountLockout": true,
+      "TestSessionManagement": true,
+      "TestOAuthSecurity": true,
+      "TestJWTSecurity": true,
+      "MaxLoginAttempts": 5,
+      "LockoutDurationMinutes": 15,
+      "SessionTimeoutMinutes": 30,
+      "PasswordMinLength": 8,
+      "PasswordRequireUppercase": true,
+      "PasswordRequireLowercase": true,
+      "PasswordRequireNumbers": true,
+      "PasswordRequireSpecialChars": true
+    },
+    "AuthorizationTests": {
+      "TestRoleBasedAccess": true,
+      "TestPermissionBasedAccess": true,
+      "TestResourceOwnership": true,
+      "TestCrossTenantAccess": true,
+      "TestAdminPrivileges": true,
+      "DefaultRoles": ["User", "Admin", "Manager"],
+      "AdminPermissions": ["*"],
+      "UserPermissions": ["Read", "Create", "UpdateOwn"]
+    },
+    "InputValidationTests": {
+      "TestXssPrevention": true,
+      "TestSqlInjectionPrevention": true,
+      "TestCsrfProtection": true,
+      "TestFileUploadSecurity": true,
+      "TestApiValidation": true,
+      "MaxInputLength": 1000,
+      "AllowedFileTypes": [".jpg", ".png", ".gif", ".pdf"],
+      "MaxFileSizeMB": 10
+    },
+    "DataProtectionTests": {
+      "TestEncryption": true,
+      "TestDataMasking": true,
+      "TestSecureStorage": true,
+      "TestBackupSecurity": true,
+      "TestCompliance": true,
+      "EncryptionAlgorithm": "AES-256",
+      "KeyRotationDays": 90,
+      "BackupRetentionDays": 30,
+      "GDPRCompliance": true,
+      "HIPAACompliance": false
+    },
+    "NetworkSecurityTests": {
+      "TestHttpsSecurity": true,
+      "TestApiSecurity": true,
+      "TestFirewallRules": true,
+      "TestRateLimiting": true,
+      "TestDDoSProtection": true,
+      "SSLEnforced": true,
+      "SecurityHeaders": true,
+      "CSPEnabled": true,
+      "HSTSEnabled": true,
+      "RateLimitRequests": 100,
+      "RateLimitWindow": "00:01:00"
+    },
+    "WebApplicationSecurityTests": {
+      "TestClickjacking": true,
+      "TestMimeSniffing": true,
+      "TestContentTypeSniffing": true,
+      "TestReferrerPolicy": true,
+      "TestFrameOptions": true,
+      "TestXSSProtection": true,
+      "TestCorsPolicy": true,
+      "AllowedOrigins": ["https://localhost:5001"],
+      "AllowedMethods": ["GET", "POST", "PUT", "DELETE"],
+      "AllowedHeaders": ["Content-Type", "Authorization"]
+    },
+    "VulnerabilityScanning": {
+      "TestKnownVulnerabilities": true,
+      "TestDependencyVulnerabilities": true,
+      "TestCodeSecurity": true,
+      "TestConfigurationSecurity": true,
+      "TestContainerSecurity": true,
+      "ScanFrequency": "Weekly",
+      "SeverityLevels": ["Critical", "High", "Medium", "Low"],
+      "IgnoreFindings": [],
+      "UpdateDatabase": true
+    },
+    "PenetrationTesting": {
+      "TestAuthenticationBypass": true,
+      "TestAuthorizationBypass": true,
+      "TestDataExposure": true,
+      "TestInjectionAttacks": true,
+      "TestCrossSiteScripting": true,
+      "TestInsecureDeserialization": true,
+      "TestSecurityMisconfiguration": true,
+      "TestSensitiveDataExposure": true,
+      "TestBrokenAccessControl": true,
+      "TestServerSideRequestForgery": true
+    },
+    "ComplianceTests": {
+      "TestGDPRCompliance": true,
+      "TestCCPACompliance": true,
+      "TestSOC2Compliance": false,
+      "TestISO27001Compliance": false,
+      "TestPCICompliance": false,
+      "DataRetentionDays": 365,
+      "RightToBeForgotten": true,
+      "DataPortability": true,
+      "ConsentManagement": true
+    },
+    "PerformanceSecurityTests": {
+      "TestDoSResistance": true,
+      "TestBruteForceProtection": true,
+      "TestResourceExhaustion": true,
+      "TestMemorySafety": true,
+      "TestThreadSafety": true,
+      "MaxRequestsPerSecond": 1000,
+      "MaxMemoryUsageMB": 512,
+      "MaxCpuUsagePercent": 80,
+      "ConnectionTimeoutSeconds": 30
+    }
+  },
+  "TestProfiles": {
+    "Quick": {
+      "Description": "快速安全检查",
+      "DurationMinutes": 5,
+      "EnabledTests": ["AuthenticationTests", "InputValidationTests"],
+      "Severity": "High"
+    },
+    "Standard": {
+      "Description": "标准安全测试",
+      "DurationMinutes": 30,
+      "EnabledTests": ["AuthenticationTests", "AuthorizationTests", "InputValidationTests", "DataProtectionTests"],
+      "Severity": "Medium"
+    },
+    "Comprehensive": {
+      "Description": "全面安全测试",
+      "DurationMinutes": 120,
+      "EnabledTests": ["All"],
+      "Severity": "All"
+    },
+    "Compliance": {
+      "Description": "合规性测试",
+      "DurationMinutes": 60,
+      "EnabledTests": ["ComplianceTests", "DataProtectionTests"],
+      "Severity": "All"
+    }
+  },
+  "VulnerabilityDatabase": {
+    "OWASPTop10": [
+      {
+        "Id": "A01:2021",
+        "Name": "Broken Access Control",
+        "Description": "访问控制失效",
+        "Severity": "Critical",
+        "TestCases": ["BrokenAccessControlTests"]
+      },
+      {
+        "Id": "A02:2021",
+        "Name": "Cryptographic Failures",
+        "Description": "加密机制失效",
+        "Severity": "Critical",
+        "TestCases": ["EncryptionTests", "DataProtectionTests"]
+      },
+      {
+        "Id": "A03:2021",
+        "Name": "Injection",
+        "Description": "注入攻击",
+        "Severity": "High",
+        "TestCases": ["SqlInjectionTests", "XssTests", "CommandInjectionTests"]
+      },
+      {
+        "Id": "A04:2021",
+        "Name": "Insecure Design",
+        "Description": "不安全的设计",
+        "Severity": "High",
+        "TestCases": ["SecurityDesignTests"]
+      },
+      {
+        "Id": "A05:2021",
+        "Name": "Security Misconfiguration",
+        "Description": "安全配置错误",
+        "Severity": "High",
+        "TestCases": ["ConfigurationTests"]
+      },
+      {
+        "Id": "A06:2021",
+        "Name": "Vulnerable and Outdated Components",
+        "Description": "易受攻击和过时的组件",
+        "Severity": "Medium",
+        "TestCases": ["DependencyTests"]
+      },
+      {
+        "Id": "A07:2021",
+        "Name": "Identification and Authentication Failures",
+        "Description": "识别和认证失效",
+        "Severity": "High",
+        "TestCases": ["AuthenticationTests"]
+      },
+      {
+        "Id": "A08:2021",
+        "Name": "Software and Data Integrity Failures",
+        "Description": "软件和数据完整性失效",
+        "Severity": "Medium",
+        "TestCases": ["IntegrityTests"]
+      },
+      {
+        "Id": "A09:2021",
+        "Name": "Security Logging and Monitoring Failures",
+        "Description": "安全日志和监控失效",
+        "Severity": "Medium",
+        "TestCases": ["LoggingTests"]
+      },
+      {
+        "Id": "A10:2021",
+        "Name": "Server-Side Request Forgery (SSRF)",
+        "Description": "服务器端请求伪造",
+        "Severity": "Medium",
+        "TestCases": ["SSRFTests"]
+      }
+    ],
+    "SASTRules": [
+      {
+        "Id": "SAST001",
+        "Name": "Hardcoded Secrets",
+        "Description": "硬编码密钥",
+        "Severity": "Critical",
+        "Pattern": "password|secret|key|token"
+      },
+      {
+        "Id": "SAST002",
+        "Name": "SQL Injection",
+        "Description": "SQL注入漏洞",
+        "Severity": "High",
+        "Pattern": "ExecuteReader|ExecuteNonQuery|ExecuteScalar"
+      },
+      {
+        "Id": "SAST003",
+        "Name": "XSS Vulnerability",
+        "Description": "跨站脚本攻击",
+        "Severity": "High",
+        "Pattern": "Response\\.Write|HtmlEncode|HtmlDecode"
+      },
+      {
+        "Id": "SAST004",
+        "Name": "Path Traversal",
+        "Description": "路径遍历",
+        "Severity": "Medium",
+        "Pattern": "File\\.ReadAllText|File\\.ReadAllBytes|Directory\\.GetFiles"
+      }
+    ]
+  },
+  "ReportingSettings": {
+    "GenerateHtmlReport": true,
+    "GenerateJsonReport": true,
+    "GenerateXmlReport": true,
+    "ReportOutputPath": "SecurityReports",
+    "IncludeRecommendations": true,
+    "IncludeRemediation": true,
+    "IncludeCodeSnippets": true,
+    "MaxFindingDetails": 1000,
+    "SecurityScoreThreshold": 80
+  },
+  "IntegrationSettings": {
+    "SonarQube": {
+      "Enabled": true,
+      "Url": "http://localhost:9000",
+      "Token": "${SONAR_TOKEN}",
+      "ProjectKey": "keyforge-security"
+    },
+    "OWASPZAP": {
+      "Enabled": true,
+      "Host": "localhost",
+      "Port": 8080,
+      "ApiKey": "${ZAP_API_KEY}",
+      "ScanTimeoutMinutes": 30
+    },
+    "GitHubSecurity": {
+      "Enabled": true,
+      "Token": "${GITHUB_TOKEN}",
+      "Repository": "keyforge/keyforge"
+    }
+  }
+}

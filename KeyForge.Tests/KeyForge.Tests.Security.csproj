@@ -1,0 +1,96 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    
+    <!-- 测试配置 -->
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    
+    <!-- 代码分析 -->
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisMode>AllEnabledByDefault</AnalysisMode>
+    <AnalysisLevel>latest</AnalysisLevel>
+    
+    <!-- 安全分析 -->
+    <EnableSecurityAnalysis>true</EnableSecurityAnalysis>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    
+    <!-- 代码质量 -->
+    <CodeAnalysisRuleSet>SecurityRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 测试框架 -->
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="xunit" Version="2.6.1" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.3">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="coverlet.collector" Version="6.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="FluentAssertions" Version="6.12.0" />
+    <PackageReference Include="Moq" Version="4.20.69" />
+    
+    <!-- 安全测试工具 -->
+    <PackageReference Include="OWASP.ZAP" Version="2.12.0" />
+    <PackageReference Include="SecurityCodeScan" Version="3.7.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="8.0.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    
+    <!-- 安全分析工具 -->
+    <PackageReference Include="SonarAnalyzer.CSharp" Version="9.13.0.78934" />
+    <PackageReference Include="RoslynSecurityGuard" Version="2.3.0" />
+    
+    <!-- Web安全测试 -->
+    <PackageReference Include="Testcontainers" Version="3.5.0" />
+    <PackageReference Include="AngleSharp" Version="1.0.7" />
+    <PackageReference Include="AngleSharp.Css" Version="1.0.0" />
+    
+    <!-- 加密测试 -->
+    <PackageReference Include="System.Security.Cryptography.Algorithms" Version="4.3.1" />
+    <PackageReference Include="System.Security.Cryptography.X509Certificates" Version="4.3.2" />
+    
+    <!-- 日志和监控 -->
+    <PackageReference Include="Serilog" Version="3.1.1" />
+    <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 项目引用 -->
+    <ProjectReference Include="..\KeyForge.Domain\KeyForge.Domain.csproj" />
+    <ProjectReference Include="..\KeyForge.Application\KeyForge.Application.csproj" />
+    <ProjectReference Include="..\KeyForge.Infrastructure\KeyForge.Infrastructure.csproj" />
+    <ProjectReference Include="..\KeyForge.Presentation\KeyForge.Presentation.csproj" />
+    <ProjectReference Include="..\KeyForge.UI\KeyForge.UI.csproj" />
+    <ProjectReference Include="..\KeyForge.Tests\KeyForge.Tests.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 配置文件 -->
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="security-test-config.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="SecurityRules.ruleset">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="vulnerability-database.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 代码分析规则 -->
+    <AdditionalFiles Include="SecurityRules.ruleset" />
+  </ItemGroup>
+
+</Project>

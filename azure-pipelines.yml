@@ -1,0 +1,346 @@
+# KeyForge CI/CD Pipeline
+trigger:
+- main
+- develop
+- feature/*
+
+pr:
+- main
+- develop
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  buildConfiguration: 'Release'
+  dotnetVersion: '8.0.x'
+  projectName: 'KeyForge'
+  sonarProjectKey: 'keyforge'
+  sonarProjectName: 'KeyForge'
+
+stages:
+- stage: Build
+  displayName: 'Build and Test'
+  jobs:
+  - job: Build
+    displayName: 'Build Solution'
+    steps:
+    - task: UseDotNet@2
+      displayName: 'Install .NET SDK'
+      inputs:
+        version: '$(dotnetVersion)'
+        includePreviewVersions: true
+    
+    - task: DotNetCoreCLI@2
+      displayName: 'Restore Dependencies'
+      inputs:
+        command: 'restore'
+        projects: '**/*.csproj'
+        feedsToUse: 'select'
+    
+    - task: DotNetCoreCLI@2
+      displayName: 'Build Solution'
+      inputs:
+        command: 'build'
+        projects: '**/*.csproj'
+        arguments: '--configuration $(buildConfiguration) --no-restore'
+    
+    - task: DotNetCoreCLI@2
+      displayName: 'Run Unit Tests'
+      inputs:
+        command: 'test'
+        projects: 'KeyForge.Tests/KeyForge.Tests.csproj'
+        arguments: '--configuration $(buildConfiguration) --no-build --collect:"XPlat Code Coverage" --results-directory $(Agent.TempDirectory)/TestResults'
+        publishTestResults: true
+    
+    - task: DotNetCoreCLI@2
+      displayName: 'Run Integration Tests'
+      inputs:
+        command: 'test'
+        projects: 'KeyForge.Tests/KeyForge.Tests.csproj'
+        arguments: '--configuration $(buildConfiguration) --no-build --filter "FullyQualifiedName~Integration" --collect:"XPlat Code Coverage" --results-directory $(Agent.TempDirectory)/TestResults'
+        publishTestResults: true
+    
+    - task: DotNetCoreCLI@2
+      displayName: 'Run Performance Tests'
+      inputs:
+        command: 'run'
+        projects: 'KeyForge.Tests/Performance/KeyForge.Tests.Performance.csproj'
+        arguments: '--configuration Release -- quick'
+    
+    - task: DotNetCoreCLI@2
+      displayName: 'Run Security Tests'
+      inputs:
+        command: 'run'
+        projects: 'KeyForge.Tests/Security/KeyForge.Tests.Security.csproj'
+        arguments: '--configuration Release -- quick'
+    
+    - task: PublishCodeCoverageResults@1
+      displayName: 'Publish Code Coverage'
+      inputs:
+        codeCoverageTool: 'Cobertura'
+        summaryFileLocation: '$(Agent.TempDirectory)/TestResults/**/*.cobertura.xml'
+        reportDirectory: '$(Agent.TempDirectory)/TestResults'
+    
+    - task: PublishTestResults@2
+      displayName: 'Publish Test Results'
+      inputs:
+        testResultsFormat: 'VSTest'
+        testResultsFiles: '$(Agent.TempDirectory)/TestResults/*.trx'
+        mergeTestResults: true
+        testRunTitle: 'KeyForge Test Results'
+    
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Build Artifacts'
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+        ArtifactName: 'drop'
+        publishLocation: 'Container'
+
+- stage: CodeQuality
+  displayName: 'Code Quality Analysis'
+  dependsOn: Build
+  condition: succeeded()
+  jobs:
+  - job: SonarQube
+    displayName: 'SonarQube Analysis'
+    steps:
+    - task: UseDotNet@2
+      displayName: 'Install .NET SDK'
+      inputs:
+        version: '$(dotnetVersion)'
+    
+    - task: SonarQubePrepare@5
+      displayName: 'Prepare SonarQube Analysis'
+      inputs:
+        SonarQube: 'SonarQube'
+        scannerMode: 'MSBuild'
+        projectKey: '$(sonarProjectKey)'
+        projectName: '$(sonarProjectName)'
+    
+    - task: DotNetCoreCLI@2
+      displayName: 'Build for SonarQube'
+      inputs:
+        command: 'build'
+        projects: '**/*.csproj'
+        arguments: '--configuration $(buildConfiguration)'
+    
+    - task: SonarQubeAnalyze@5
+      displayName: 'Run SonarQube Analysis'
+    
+    - task: SonarQubePublish@5
+      displayName: 'Publish SonarQube Quality Gate'
+      inputs:
+        pollingTimeoutSec: '300'
+
+- stage: SecurityScan
+  displayName: 'Security Scan'
+  dependsOn: Build
+  condition: succeeded()
+  jobs:
+  - job: SecurityTests
+    displayName: 'Security Tests'
+    steps:
+    - task: UseDotNet@2
+      displayName: 'Install .NET SDK'
+      inputs:
+        version: '$(dotnetVersion)'
+    
+    - task: DotNetCoreCLI@2
+      displayName: 'Run Security Tests'
+      inputs:
+        command: 'run'
+        projects: 'KeyForge.Tests/Security/KeyForge.Tests.Security.csproj'
+        arguments: '--configuration Release -- scan'
+    
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Security Reports'
+      inputs:
+        PathtoPublish: 'KeyForge.Tests/Security/SecurityReports/'
+        ArtifactName: 'security-reports'
+        publishLocation: 'Container'
+
+- stage: PerformanceTest
+  displayName: 'Performance Test'
+  dependsOn: Build
+  condition: succeeded()
+  jobs:
+  - job: PerformanceTests
+    displayName: 'Performance Tests'
+    steps:
+    - task: UseDotNet@2
+      displayName: 'Install .NET SDK'
+      inputs:
+        version: '$(dotnetVersion)'
+    
+    - task: DotNetCoreCLI@2
+      displayName: 'Run Performance Tests'
+      inputs:
+        command: 'run'
+        projects: 'KeyForge.Tests/Performance/KeyForge.Tests.Performance.csproj'
+        arguments: '--configuration Release -- full'
+    
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Performance Reports'
+      inputs:
+        PathtoPublish: 'KeyForge.Tests/Performance/PerformanceReports/'
+        ArtifactName: 'performance-reports'
+        publishLocation: 'Container'
+
+- stage: E2ETest
+  displayName: 'E2E Test'
+  dependsOn: Build
+  condition: succeeded()
+  jobs:
+  - job: E2ETests
+    displayName: 'E2E Tests'
+    steps:
+    - task: NodeTool@0
+      displayName: 'Install Node.js'
+      inputs:
+        versionSpec: '18.x'
+    
+    - task: Npm@1
+      displayName: 'Install Playwright'
+      inputs:
+        command: 'install'
+        workingDir: 'e2e'
+    
+    - task: Npm@1
+      displayName: 'Run E2E Tests'
+      inputs:
+        command: 'custom'
+        workingDir: 'e2e'
+        customCommand: 'run test'
+    
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish E2E Test Results'
+      inputs:
+        PathtoPublish: 'e2e/test-results/'
+        ArtifactName: 'e2e-test-results'
+        publishLocation: 'Container'
+
+- stage: DeployStaging
+  displayName: 'Deploy to Staging'
+  dependsOn: [CodeQuality, SecurityScan, PerformanceTest, E2ETest]
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  jobs:
+  - job: DeployStaging
+    displayName: 'Deploy to Staging'
+    steps:
+    - task: UseDotNet@2
+      displayName: 'Install .NET SDK'
+      inputs:
+        version: '$(dotnetVersion)'
+    
+    - task: DotNetCoreCLI@2
+      displayName: 'Publish Application'
+      inputs:
+        command: 'publish'
+        publishWebProjects: true
+        arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
+        zipAfterPublish: true
+    
+    - task: AzureWebApp@1
+      displayName: 'Deploy to Azure Staging'
+      inputs:
+        azureSubscription: 'KeyForge-Staging'
+        appType: 'webApp'
+        appName: 'keyforge-staging'
+        package: '$(Build.ArtifactStagingDirectory)/**/*.zip'
+        deploymentMethod: 'auto'
+    
+    - task: PowerShell@2
+      displayName: 'Run Smoke Tests'
+      inputs:
+        targetType: 'inline'
+        script: |
+          $response = Invoke-WebRequest -Uri "https://keyforge-staging.azurewebsites.net/health" -Method GET
+          if ($response.StatusCode -ne 200) {
+            Write-Error "Smoke test failed"
+            exit 1
+          }
+          Write-Host "Smoke test passed"
+    
+    - task: Notify@1
+      displayName: 'Notify Deployment'
+      inputs:
+        type: 'Slack'
+        webhookUrl: '$(SLACK_WEBHOOK_URL)'
+        message: 'Deployed to staging successfully'
+        channel: '#deployments'
+
+- stage: DeployProduction
+  displayName: 'Deploy to Production'
+  dependsOn: [DeployStaging]
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  jobs:
+  - deployment: DeployProduction
+    displayName: 'Deploy to Production'
+    environment: 'Production'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: UseDotNet@2
+            displayName: 'Install .NET SDK'
+            inputs:
+              version: '$(dotnetVersion)'
+          
+          - task: DotNetCoreCLI@2
+            displayName: 'Publish Application'
+            inputs:
+              command: 'publish'
+              publishWebProjects: true
+              arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
+              zipAfterPublish: true
+          
+          - task: AzureWebApp@1
+            displayName: 'Deploy to Azure Production'
+            inputs:
+              azureSubscription: 'KeyForge-Production'
+              appType: 'webApp'
+              appName: 'keyforge-production'
+              package: '$(Build.ArtifactStagingDirectory)/**/*.zip'
+              deploymentMethod: 'auto'
+          
+          - task: PowerShell@2
+            displayName: 'Run Smoke Tests'
+            inputs:
+              targetType: 'inline'
+              script: |
+                $response = Invoke-WebRequest -Uri "https://keyforge-production.azurewebsites.net/health" -Method GET
+                if ($response.StatusCode -ne 200) {
+                  Write-Error "Smoke test failed"
+                  exit 1
+                }
+                Write-Host "Smoke test passed"
+          
+          - task: Notify@1
+            displayName: 'Notify Deployment'
+            inputs:
+              type: 'Slack'
+              webhookUrl: '$(SLACK_WEBHOOK_URL)'
+              message: 'Deployed to production successfully'
+              channel: '#deployments'
+
+- stage: Notify
+  displayName: 'Notify Results'
+  dependsOn: [Build, CodeQuality, SecurityScan, PerformanceTest, E2ETest, DeployStaging, DeployProduction]
+  condition: always()
+  jobs:
+  - job: NotifyResults
+    displayName: 'Notify Pipeline Results'
+    steps:
+    - task: Notify@1
+      displayName: 'Notify Pipeline Results'
+      inputs:
+        type: 'Slack'
+        webhookUrl: '$(SLACK_WEBHOOK_URL)'
+        message: |
+          Pipeline: $(Build.DefinitionName)
+          Build: $(Build.BuildNumber)
+          Branch: $(Build.SourceBranch)
+          Status: $(Agent.JobStatus)
+          Duration: $(Build.JobDuration)
+        channel: '#ci-cd'

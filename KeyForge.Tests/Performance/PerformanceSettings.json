@@ -1,0 +1,111 @@
+{
+  "PerformanceSettings": {
+    "BenchmarkSettings": {
+      "WarmupIterations": 3,
+      "TargetIterations": 10,
+      "MinIterationTime": "00:00:01",
+      "MaxIterationTime": "00:01:00",
+      "MaxMemoryUsageMB": 512,
+      "MaxCpuUsagePercent": 80
+    },
+    "LoadTestSettings": {
+      "DefaultDurationSeconds": 30,
+      "DefaultConcurrentUsers": 50,
+      "MaxConcurrentUsers": 200,
+      "RampUpTimeSeconds": 10,
+      "ThinkTimeMs": {
+        "Min": 100,
+        "Max": 500
+      },
+      "SuccessRateThreshold": 95.0,
+      "ResponseTimeThresholdMs": 1000
+    },
+    "MemoryTestSettings": {
+      "TestIterations": 1000,
+      "MemoryGrowthThresholdMB": 10,
+      "CleanupEfficiencyThreshold": 85.0,
+      "GcCollectInterval": 100,
+      "MemorySampleInterval": 10
+    },
+    "StressTestSettings": {
+      "MaxDurationMinutes": 5,
+      "MaxErrorRate": 5.0,
+      "MinThroughput": 100,
+      "MaxMemoryLeakMB": 50,
+      "ConcurrentLevels": [10, 50, 100, 200]
+    },
+    "ReportingSettings": {
+      "GenerateHtmlReport": true,
+      "GenerateMarkdownReport": true,
+      "GenerateJsonReport": true,
+      "ReportOutputPath": "PerformanceReports",
+      "IncludeCharts": true,
+      "IncludeSystemMetrics": true
+    },
+    "LoggingSettings": {
+      "LogLevel": "Information",
+      "LogToFile": true,
+      "LogFilePath": "performance-tests.log",
+      "LogMetrics": true,
+      "LogErrors": true
+    }
+  },
+  "TestProfiles": {
+    "Quick": {
+      "Description": "快速性能检查",
+      "DurationSeconds": 15,
+      "ConcurrentUsers": 10,
+      "Iterations": 100,
+      "EnabledTests": ["BasicOperations", "MemoryUsage"]
+    },
+    "Standard": {
+      "Description": "标准性能测试",
+      "DurationSeconds": 60,
+      "ConcurrentUsers": 50,
+      "Iterations": 1000,
+      "EnabledTests": ["BasicOperations", "MemoryUsage", "LoadTests", "StressTests"]
+    },
+    "Comprehensive": {
+      "Description": "全面性能测试",
+      "DurationSeconds": 300,
+      "ConcurrentUsers": 200,
+      "Iterations": 10000,
+      "EnabledTests": ["All"]
+    },
+    "Production": {
+      "Description": "生产环境性能测试",
+      "DurationSeconds": 1800,
+      "ConcurrentUsers": 500,
+      "Iterations": 50000,
+      "EnabledTests": ["LoadTests", "StressTests", "MemoryTests"]
+    }
+  },
+  "SystemMetrics": {
+    "CollectCpuMetrics": true,
+    "CollectMemoryMetrics": true,
+    "CollectDiskMetrics": true,
+    "CollectNetworkMetrics": true,
+    "SampleIntervalMs": 1000,
+    "MaxSamples": 10000
+  },
+  "DatabaseSettings": {
+    "UseInMemoryDatabase": true,
+    "ConnectionString": "Data Source=performance-test.db",
+    "CommandTimeoutSeconds": 30,
+    "MaxPoolSize": 100,
+    "EnableDetailedLogging": true
+  },
+  "CacheSettings": {
+    "EnableCaching": true,
+    "CacheSizeMB": 256,
+    "ExpirationMinutes": 30,
+    "EnableDistributedCache": false,
+    "RedisConnectionString": "localhost:6379"
+  },
+  "FileStorageSettings": {
+    "BasePath": "performance-test-storage",
+    "MaxFileSizeMB": 10,
+    "CleanupOnStart": true,
+    "EnableCompression": true
+  }
+}

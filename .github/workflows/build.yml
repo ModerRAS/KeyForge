@@ -1,0 +1,320 @@
+name: KeyForge Build and Deploy
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+        - staging
+        - production
+      version:
+        description: 'Version number'
+        required: true
+        type: string
+
+env:
+  DOTNET_VERSION: '9.0.x'
+  SOLUTION_FILE: 'KeyForge.sln'
+  CONFIGURATION: 'Release'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      commit_hash: ${{ steps.version.outputs.commit_hash }}
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Extract Version
+      id: version
+      run: |
+        if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+        else
+          echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+        fi
+        echo "commit_hash=${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
+        
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+          
+    - name: Restore dependencies
+      run: dotnet restore ${{ env.SOLUTION_FILE }}
+      
+    - name: Update Version
+      run: |
+        # 更新版本信息
+        $version = "${{ steps.version.outputs.version }}"
+        $commitHash = "${{ steps.version.outputs.commit_hash }}"
+        
+        # 更新AssemblyInfo
+        $assemblyInfoPath = "KeyForge.Presentation/Properties/AssemblyInfo.cs"
+        if (Test-Path $assemblyInfoPath) {
+          $content = Get-Content $assemblyInfoPath
+          $content = $content -replace 'AssemblyVersion\("[^"]*"\)', "AssemblyVersion(`"$version`")"
+          $content = $content -replace 'AssemblyFileVersion\("[^"]*"\)', "AssemblyFileVersion(`"$version`")"
+          $content = $content -replace 'AssemblyInformationalVersion\("[^"]*"\)', "AssemblyInformationalVersion(`"$version-$commitHash`")"
+          Set-Content $assemblyInfoPath $content
+        }
+        
+        # 更新项目文件
+        $projectFiles = Get-ChildItem -Path . -Filter "*.csproj" -Recurse
+        foreach ($projectFile in $projectFiles) {
+          $content = Get-Content $projectFile.FullName
+          $content = $content -replace '<Version>[^<]*</Version>', "<Version>$version</Version>"
+          $content = $content -replace '<AssemblyVersion>[^<]*</AssemblyVersion>', "<AssemblyVersion>$version</AssemblyVersion>"
+          $content = $content -replace '<FileVersion>[^<]*</FileVersion>', "<FileVersion>$version</FileVersion>"
+          Set-Content $projectFile.FullName $content
+        }
+        
+    - name: Build solution
+      run: dotnet build ${{ env.SOLUTION_FILE }} --configuration ${{ env.CONFIGURATION }} --no-restore
+      
+    - name: Run Unit Tests
+      run: dotnet test ${{ env.SOLUTION_FILE }} --configuration ${{ env.CONFIGURATION }} --filter "TestCategory=Unit" --verbosity normal --collect:"XPlat Code Coverage"
+      
+    - name: Publish Applications
+      run: |
+        # 发布主应用程序
+        dotnet publish KeyForge.Presentation/KeyForge.Presentation.csproj --configuration ${{ env.CONFIGURATION }} --output ./publish/win-x64 --runtime win-x64 --self-contained true
+        
+        # 发布控制台应用程序
+        dotnet publish KeyForge.Console/KeyForge.Console.csproj --configuration ${{ env.CONFIGURATION }} --output ./publish/console --runtime win-x64 --self-contained true
+        
+    - name: Create Installer
+      run: |
+        # 创建安装程序
+        $version = "${{ steps.version.outputs.version }}"
+        
+        # 创建安装程序目录结构
+        New-Item -ItemType Directory -Force -Path "installer/x64"
+        Copy-Item -Path "publish/win-x64/*" -Destination "installer/x64" -Recurse
+        
+        # 创建安装程序脚本
+        $installerScript = @"
+        ; KeyForge Installer Script
+        [Setup]
+        AppName=KeyForge
+        AppVersion=$version
+        DefaultDirName={pf}\KeyForge
+        DefaultGroupName=KeyForge
+        OutputDir=installer
+        OutputBaseFilename=KeyForge-Setup-$version
+        Compression=lzma
+        SolidCompression=yes
+        
+        [Files]
+        Source: "x64\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+        
+        [Icons]
+        Name: "{group}\KeyForge"; Filename: "{app}\KeyForge.exe"
+        Name: "{commondesktop}\KeyForge"; Filename: "{app}\KeyForge.exe"
+        
+        [Run]
+        Filename: "{app}\KeyForge.exe"; Description: "{cm:LaunchProgram,KeyForge}"; Flags: nowait postinstall skipifsilent
+        "@
+        
+        Set-Content -Path "installer/keyforge.iss" -Value $installerScript
+        
+    - name: Package Application
+      run: |
+        # 创建发布包
+        $version = "${{ steps.version.outputs.version }}"
+        $commitHash = "${{ steps.version.outputs.commit_hash }}"
+        
+        # 创建ZIP包
+        Compress-Archive -Path "./publish/win-x64/*" -DestinationPath "KeyForge-$version-win-x64.zip"
+        Compress-Archive -Path "./publish/console/*" -DestinationPath "KeyForge-Console-$version-win-x64.zip"
+        
+        # 创建便携版
+        Compress-Archive -Path "./publish/win-x64/*" -DestinationPath "KeyForge-Portable-$version-win-x64.zip"
+        
+    - name: Upload Build Artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: build-output
+        path: |
+          KeyForge-*-win-x64.zip
+          installer/
+          
+  sign:
+    runs-on: windows-latest
+    needs: build
+    
+    steps:
+    - name: Download build artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: build-output
+        
+    - name: Setup Code Signing
+      run: |
+        # 配置代码签名证书
+        $certPath = "${{ runner.temp }}/signing-cert.pfx"
+        $certPassword = "${{ secrets.SIGNING_CERT_PASSWORD }}"
+        
+        # 解码证书
+        $certData = [System.Convert]::FromBase64String("${{ secrets.SIGNING_CERT_BASE64 }}")
+        [System.IO.File]::WriteAllBytes($certPath, $certData)
+        
+        echo "CERT_PATH=$certPath" >> $GITHUB_ENV
+        echo "CERT_PASSWORD=$certPassword" >> $GITHUB_ENV
+        
+    - name: Sign Executables
+      run: |
+        # 签名可执行文件
+        $version = "${{ needs.build.outputs.version }}"
+        $zipPath = "KeyForge-$version-win-x64.zip"
+        
+        # 解压ZIP文件
+        Expand-Archive -Path $zipPath -DestinationPath "sign-temp"
+        
+        # 签名所有.exe和.dll文件
+        Get-ChildItem -Path "sign-temp" -Filter "*.exe" -Recurse | ForEach-Object {
+          signtool sign /f "$env:CERT_PATH" /p "$env:CERT_PASSWORD" /fd SHA256 /td SHA256 /tr http://timestamp.digicert.com $_.FullName
+        }
+        
+        Get-ChildItem -Path "sign-temp" -Filter "*.dll" -Recurse | ForEach-Object {
+          signtool sign /f "$env:CERT_PATH" /p "$env:CERT_PASSWORD" /fd SHA256 /td SHA256 /tr http://timestamp.digicert.com $_.FullName
+        }
+        
+        # 重新打包
+        Compress-Archive -Path "sign-temp/*" -DestinationPath "KeyForge-$version-signed-win-x64.zip"
+        
+    - name: Upload Signed Artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: signed-output
+        path: |
+          KeyForge-*-signed-win-x64.zip
+          
+  deploy:
+    runs-on: windows-latest
+    needs: [build, sign]
+    if: always() && (needs.build.result == 'success' || needs.sign.result == 'success')
+    
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+    
+    steps:
+    - name: Download signed artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: signed-output
+        
+    - name: Deploy to Azure App Service
+      if: github.event.inputs.environment == 'staging' || github.ref == 'refs/heads/develop'
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: 'keyforge-${{ github.event.inputs.environment || 'staging' }}'
+        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+        package: 'KeyForge-${{ needs.build.outputs.version }}-signed-win-x64.zip'
+        
+    - name: Deploy to Production
+      if: github.event.inputs.environment == 'production' || startsWith(github.ref, 'refs/tags/v')
+      run: |
+        # 部署到生产环境
+        $version = "${{ needs.build.outputs.version }}"
+        
+        # 创建GitHub Release
+        gh release create "v$version" \
+          --title "KeyForge v$version" \
+          --notes "## 🎉 KeyForge v$version Release
+
+          ### 🚀 New Features
+          - Feature 1
+          - Feature 2
+
+          ### 🐛 Bug Fixes
+          - Bug fix 1
+          - Bug fix 2
+
+          ### 📦 Installation
+          - Download the installer from the assets below
+          - Run the installer and follow the setup wizard
+          - Launch KeyForge from the Start menu
+
+          ### 📝 Documentation
+          - [User Guide](https://docs.keyforge.com)
+          - [API Documentation](https://api.keyforge.com)
+          - [Release Notes](https://github.com/keyforge/keyforge/releases)
+
+          ---
+          **Commit Hash:** `${{ needs.build.outputs.commit_hash }}`" \
+          KeyForge-$version-signed-win-x64.zip \
+          KeyForge-Console-$version-win-x64.zip \
+          KeyForge-Portable-$version-win-x64.zip
+          
+    - name: Deploy to NuGet
+      if: github.event.inputs.environment == 'production' || startsWith(github.ref, 'refs/tags/v')
+      run: |
+        # 发布到NuGet
+        $version = "${{ needs.build.outputs.version }}"
+        
+        # 创建NuGet包
+        dotnet pack KeyForge.Core/KeyForge.Core.csproj --configuration ${{ env.CONFIGURATION }} --output ./nupkg
+        dotnet pack KeyForge.Infrastructure/KeyForge.Infrastructure.csproj --configuration ${{ env.CONFIGURATION }} --output ./nupkg
+        
+        # 推送到NuGet
+        dotnet nuget push ./nupkg/*.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }}
+        
+    - name: Deploy to Docker Hub
+      if: github.event.inputs.environment == 'production' || startsWith(github.ref, 'refs/tags/v')
+      run: |
+        # 构建并推送Docker镜像
+        $version = "${{ needs.build.outputs.version }}"
+        
+        # 登录到Docker Hub
+        echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+        
+        # 构建镜像
+        docker build -t keyforge/keyforge:$version -t keyforge/keyforge:latest .
+        
+        # 推送镜像
+        docker push keyforge/keyforge:$version
+        docker push keyforge/keyforge:latest
+        
+    - name: Notify Deployment
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        channel: '#deployments'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+        
+  notify:
+    runs-on: windows-latest
+    needs: deploy
+    if: always()
+    
+    steps:
+    - name: Send Notification
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ needs.deploy.result }}
+        channel: '#deployments'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        fields: repo,message,commit,author,action,eventName,ref,workflow
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}

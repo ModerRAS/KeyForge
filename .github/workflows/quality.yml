@@ -1,0 +1,335 @@
+name: KeyForge Quality Checks
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 2 * * *'  # 每天凌晨2点运行
+
+env:
+  DOTNET_VERSION: '9.0.x'
+  SOLUTION_FILE: 'KeyForge.sln'
+  CONFIGURATION: 'Release'
+
+jobs:
+  code-quality:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Restore dependencies
+      run: dotnet restore ${{ env.SOLUTION_FILE }}
+      
+    - name: Run Code Analysis
+      run: |
+        # 安装代码分析工具
+        dotnet tool install -g roslyn-analyzers
+        dotnet tool install -g security-scan
+        dotnet tool install -g code-metrics
+        
+        # 运行代码分析
+        roslyn-analyzers --project ${{ env.SOLUTION_FILE }} --output TestResults/CodeQuality/roslyn.json
+        security-scan --project ${{ env.SOLUTION_FILE }} --output TestResults/CodeQuality/security.json
+        code-metrics --project ${{ env.SOLUTION_FILE }} --output TestResults/CodeQuality/metrics.json
+        
+    - name: Run StyleCop
+      run: |
+        # 安装StyleCop
+        dotnet tool install -g stylecop.console
+        
+        # 运行StyleCop检查
+        stylecop.console ${{ env.SOLUTION_FILE }} --output TestResults/CodeQuality/stylecop.json
+        
+    - name: Upload Code Quality Results
+      uses: actions/upload-artifact@v3
+      with:
+        name: code-quality-results
+        path: TestResults/CodeQuality/
+        
+  security-scan:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Run Security Scan
+      uses: securecodewarrior/github-action-add-sarif@v1
+      with:
+        sarif-file: 'TestResults/Security/security.sarif'
+        
+    - name: Run Dependency Check
+      run: |
+        # 安装依赖检查工具
+        dotnet tool install -g dotnet-depends
+        
+        # 检查依赖项
+        dotnet-depends ${{ env.SOLUTION_FILE }} --output TestResults/Security/dependencies.json
+        
+        # 检查已知漏洞
+        dotnet list package --vulnerable --include-transitive as-json > TestResults/Security/vulnerabilities.json
+        
+    - name: Run Secrets Scan
+      uses: trufflesecurity/trufflehog@main
+      with:
+        path: ./
+        base: main
+        head: HEAD
+        
+    - name: Upload Security Results
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-results
+        path: TestResults/Security/
+        
+  performance-analysis:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Restore dependencies
+      run: dotnet restore ${{ env.SOLUTION_FILE }}
+      
+    - name: Build solution
+      run: dotnet build ${{ env.SOLUTION_FILE }} --configuration ${{ env.CONFIGURATION }}
+      
+    - name: Run Performance Analysis
+      run: |
+        # 安装性能分析工具
+        dotnet tool install -g benchmarkdotnet
+        dotnet tool install -g memory-leak-detector
+        
+        # 运行性能基准测试
+        dotnet run --project KeyForge.Benchmarks --configuration ${{ env.CONFIGURATION }} --output TestResults/Performance/
+        
+        # 检测内存泄漏
+        memory-leak-detector --project ${{ env.SOLUTION_FILE }} --output TestResults/Performance/memory.json
+        
+    - name: Upload Performance Results
+      uses: actions/upload-artifact@v3
+      with:
+        name: performance-results
+        path: TestResults/Performance/
+        
+  documentation:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Generate Documentation
+      run: |
+        # 安装文档生成工具
+        dotnet tool install -g docfx
+        
+        # 生成API文档
+        docfx docfx.json --output TestResults/Documentation/
+        
+    - name: Check Documentation Coverage
+      run: |
+        # 检查文档覆盖率
+        $totalFiles = Get-ChildItem -Path . -Filter "*.cs" -Recurse | Where-Object { $_.FullName -notlike "*\obj\*" } | Measure-Object | Select-Object -ExpandProperty Count
+        $documentedFiles = Get-ChildItem -Path "TestResults/Documentation/" -Filter "*.md" -Recurse | Measure-Object | Select-Object -ExpandProperty Count
+        
+        $coverage = if ($totalFiles -gt 0) { [math]::Round(($documentedFiles / $totalFiles) * 100, 2) } else { 0 }
+        echo "Documentation Coverage: $coverage%"
+        
+        echo "DOCUMENTATION_COVERAGE=$coverage" >> $GITHUB_ENV
+        
+    - name: Upload Documentation
+      uses: actions/upload-artifact@v3
+      with:
+        name: documentation
+        path: TestResults/Documentation/
+        
+  compliance:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Check License Compliance
+      run: |
+        # 安装许可证检查工具
+        dotnet tool install -g license-checker
+        
+        # 检查许可证合规性
+        license-checker ${{ env.SOLUTION_FILE }} --output TestResults/Compliance/licenses.json
+        
+    - name: Check GDPR Compliance
+      run: |
+        # 检查GDPR合规性
+        $gdprIssues = @()
+        
+        # 检查日志记录是否包含个人数据
+        $logFiles = Get-ChildItem -Path . -Filter "*.cs" -Recurse | Select-String -Pattern "Log.*Information|Log.*Error|Log.*Warning"
+        foreach ($match in $logFiles) {
+            if ($match.Line -match "user|email|name|address|phone") {
+                $gdprIssues += "Potential GDPR issue in $($match.Path):$($match.LineNumber)"
+            }
+        }
+        
+        # 输出GDPR检查结果
+        $gdprIssues | Out-File -FilePath TestResults/Compliance/gdpr.json
+        
+    - name: Upload Compliance Results
+      uses: actions/upload-artifact@v3
+      with:
+        name: compliance-results
+        path: TestResults/Compliance/
+        
+  quality-gate:
+    runs-on: windows-latest
+    needs: [code-quality, security-scan, performance-analysis, documentation, compliance]
+    if: always()
+    
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v3
+      
+    - name: Evaluate Quality Gate
+      run: |
+        # 评估质量门禁
+        $qualityGate = $true
+        $issues = @()
+        
+        # 检查代码质量
+        if (Test-Path "code-quality-results/roslyn.json") {
+            $roslynResults = Get-Content "code-quality-results/roslyn.json" | ConvertFrom-Json
+            if ($roslynResults.issues.Count -gt 10) {
+                $qualityGate = $false
+                $issues += "Too many code quality issues: $($roslynResults.issues.Count)"
+            }
+        }
+        
+        # 检查安全漏洞
+        if (Test-Path "security-results/vulnerabilities.json") {
+            $vulnerabilityResults = Get-Content "security-results/vulnerabilities.json" | ConvertFrom-Json
+            if ($vulnerabilityResults.vulnerabilities.Count -gt 0) {
+                $qualityGate = $false
+                $issues += "Security vulnerabilities found: $($vulnerabilityResults.vulnerabilities.Count)"
+            }
+        }
+        
+        # 检查性能
+        if (Test-Path "performance-results/benchmark.json") {
+            $benchmarkResults = Get-Content "performance-results/benchmark.json" | ConvertFrom-Json
+            if ($benchmarkResults.regression -gt 0.1) {
+                $qualityGate = $false
+                $issues += "Performance regression detected: $($benchmarkResults.regression * 100)%"
+            }
+        }
+        
+        # 检查文档覆盖率
+        if ($env:DOCUMENTATION_COVERAGE -and [double]$env:DOCUMENTATION_COVERAGE -lt 70) {
+            $qualityGate = $false
+            $issues += "Documentation coverage too low: $env:DOCUMENTATION_COVERAGE%"
+        }
+        
+        # 输出质量门禁结果
+        $qualityGate | Out-File -FilePath "quality-gate-result.txt"
+        $issues | Out-File -FilePath "quality-gate-issues.txt"
+        
+        echo "QUALITY_GATE_PASSED=$qualityGate" >> $GITHUB_ENV
+        
+    - name: Upload Quality Gate Results
+      uses: actions/upload-artifact@v3
+      with:
+        name: quality-gate-results
+        path: |
+          quality-gate-result.txt
+          quality-gate-issues.txt
+          
+    - name: Comment PR with Quality Gate
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const qualityGate = process.env.QUALITY_GATE_PASSED === 'true';
+          
+          let comment = '## 🧪 Quality Gate Results\n\n';
+          
+          if (qualityGate) {
+            comment += '✅ **Quality Gate Passed**\n\n';
+          } else {
+            comment += '❌ **Quality Gate Failed**\n\n';
+          }
+          
+          if (fs.existsSync('quality-gate-issues.txt')) {
+            const issues = fs.readFileSync('quality-gate-issues.txt', 'utf8');
+            comment += '### 📋 Issues Found:\n';
+            comment += '```\n';
+            comment += issues;
+            comment += '```\n\n';
+          }
+          
+          comment += '### 📊 Quality Metrics:\n';
+          comment += '- Code Quality: ' + (fs.existsSync('code-quality-results/roslyn.json') ? '✅' : '❌') + '\n';
+          comment += '- Security Scan: ' + (fs.existsSync('security-results/vulnerabilities.json') ? '✅' : '❌') + '\n';
+          comment += '- Performance Analysis: ' + (fs.existsSync('performance-results/benchmark.json') ? '✅' : '❌') + '\n';
+          comment += '- Documentation: ' + (process.env.DOCUMENTATION_COVERAGE + '%') + '\n';
+          comment += '- Compliance: ' + (fs.existsSync('compliance-results/licenses.json') ? '✅' : '❌') + '\n';
+          
+          comment += '\n📈 **View detailed results in the artifacts below**';
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+          
+    - name: Block merge if quality gate fails
+      if: env.QUALITY_GATE_PASSED != 'true' && github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: '❌ **Merge Blocked**: Quality gate failed. Please fix the issues before merging.'
+          });
+          
+          // 添加阻止合并的标签
+          github.rest.issues.addLabels({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            labels: ['do-not-merge']
+          });
+          
+  notify:
+    runs-on: windows-latest
+    needs: quality-gate
+    if: always()
+    
+    steps:
+    - name: Send Quality Report
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ needs.quality-gate.result }}
+        channel: '#quality'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        fields: repo,message,commit,author,action,eventName,ref,workflow
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}

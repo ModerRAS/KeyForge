@@ -1,0 +1,147 @@
+{
+  "TestRunConfiguration": {
+    "Name": "KeyForge Comprehensive Test Suite",
+    "Description": "Full test suite for KeyForge project including unit, integration, performance, and end-to-end tests",
+    "Version": "1.0.0",
+    "CreatedDate": "2024-01-01T00:00:00Z"
+  },
+  "TestCategories": [
+    {
+      "Name": "UnitTests",
+      "DisplayName": "单元测试",
+      "Description": "测试各个组件的独立功能",
+      "Enabled": true,
+      "Priority": "High",
+      "Timeout": 30000,
+      "Parallel": true,
+      "MaxConcurrency": 4,
+      "IncludePatterns": [
+        "**/UnitTests/**/*.cs",
+        "**/UnitTests/*.cs"
+      ],
+      "ExcludePatterns": [
+        "**/bin/**",
+        "**/obj/**"
+      ]
+    },
+    {
+      "Name": "IntegrationTests",
+      "DisplayName": "集成测试",
+      "Description": "测试组件间的交互",
+      "Enabled": true,
+      "Priority": "High",
+      "Timeout": 60000,
+      "Parallel": true,
+      "MaxConcurrency": 2,
+      "IncludePatterns": [
+        "**/IntegrationTests/**/*.cs",
+        "**/IntegrationTests/*.cs"
+      ],
+      "ExcludePatterns": [
+        "**/bin/**",
+        "**/obj/**"
+      ]
+    },
+    {
+      "Name": "PerformanceTests",
+      "DisplayName": "性能测试",
+      "Description": "测试系统性能和资源使用",
+      "Enabled": true,
+      "Priority": "Medium",
+      "Timeout": 300000,
+      "Parallel": false,
+      "MaxConcurrency": 1,
+      "IncludePatterns": [
+        "**/PerformanceTests/**/*.cs",
+        "**/PerformanceTests/*.cs"
+      ],
+      "ExcludePatterns": [
+        "**/bin/**",
+        "**/obj/**"
+      ]
+    },
+    {
+      "Name": "EndToEndTests",
+      "DisplayName": "端到端测试",
+      "Description": "测试完整的用户工作流",
+      "Enabled": true,
+      "Priority": "High",
+      "Timeout": 120000,
+      "Parallel": false,
+      "MaxConcurrency": 1,
+      "IncludePatterns": [
+        "**/EndToEndTests/**/*.cs",
+        "**/EndToEndTests/*.cs"
+      ],
+      "ExcludePatterns": [
+        "**/bin/**",
+        "**/obj/**"
+      ]
+    }
+  ],
+  "TestExecution": {
+    "StopOnFailure": false,
+    "CollectCoverage": true,
+    "CoverageThreshold": 80,
+    "GenerateReport": true,
+    "ReportFormat": "Html",
+    "OutputDirectory": "TestResults",
+    "LogLevel": "Information",
+    "TraceEnabled": false
+  },
+  "PerformanceSettings": {
+    "WarmupIterations": 3,
+    "MinIterationTime": 100,
+    "MaxIterationTime": 5000,
+    "MemoryLimitMB": 512,
+    "CpuLimitPercent": 80,
+    "EnableProfiling": false,
+    "EnableMemoryTracking": true,
+    "EnableCpuTracking": true
+  },
+  "Reporting": {
+    "Enabled": true,
+    "Formats": ["Html", "Json", "Xml"],
+    "IncludeCoverage": true,
+    "IncludePerformance": true,
+    "IncludeLogs": true,
+    "OutputPath": "TestResults/Reports",
+    "TemplatePath": "Templates/report-template.html"
+  },
+  "Notifications": {
+    "Enabled": false,
+    "OnSuccess": false,
+    "OnFailure": true,
+    "Email": {
+      "SmtpServer": "smtp.gmail.com",
+      "SmtpPort": 587,
+      "Username": "",
+      "Password": "",
+      "From": "",
+      "To": [],
+      "Subject": "KeyForge Test Results"
+    }
+  },
+  "Cleanup": {
+    "Enabled": true,
+    "CleanupTempFiles": true,
+    "CleanupTestArtifacts": true,
+    "CleanupLogs": false,
+    "KeepReports": true,
+    "MaxReportAgeDays": 30
+  },
+  "Environment": {
+    "Configuration": "Test",
+    "Database": {
+      "Type": "InMemory",
+      "ConnectionString": "Data Source=:memory:",
+      "SeedTestData": true
+    },
+    "Logging": {
+      "Level": "Warning",
+      "LogToFile": true,
+      "LogToConsole": true,
+      "LogPath": "TestResults/Logs"
+    }
+  }
+}

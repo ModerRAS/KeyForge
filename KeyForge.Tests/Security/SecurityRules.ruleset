@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RuleSet Name="Security Rules" Description="KeyForge Security Rules" ToolsVersion="16.0">
+  <Rules AnalyzerId="Microsoft.CodeAnalysis.CSharp" RuleNamespace="Microsoft.CodeAnalysis.CSharp">
+    <!-- 认证安全规则 -->
+    <Rule Id="CA2100" Action="Error" />
+    <Rule Id="CA2108" Action="Error" />
+    <Rule Id="CA2109" Action="Error" />
+    
+    <!-- 数据安全规则 -->
+    <Rule Id="CA3075" Action="Error" />
+    <Rule Id="CA3076" Action="Error" />
+    <Rule Id="CA3077" Action="Error" />
+    
+    <!-- 加密安全规则 -->
+    <Rule Id="CA5350" Action="Error" />
+    <Rule Id="CA5351" Action="Error" />
+    <Rule Id="CA5358" Action="Error" />
+    <Rule Id="CA5359" Action="Error" />
+    <Rule Id="CA5360" Action="Error" />
+    <Rule Id="CA5361" Action="Error" />
+    <Rule Id="CA5362" Action="Error" />
+    
+    <!-- 信息泄露规则 -->
+    <Rule Id="CA5363" Action="Error" />
+    <Rule Id="CA5364" Action="Error" />
+    <Rule Id="CA5365" Action="Error" />
+    <Rule Id="CA5366" Action="Error" />
+    <Rule Id="CA5367" Action="Error" />
+    <Rule Id="CA5368" Action="Error" />
+    <Rule Id="CA5369" Action="Error" />
+    
+    <!-- 输入验证规则 -->
+    <Rule Id="CA5370" Action="Error" />
+    <Rule Id="CA5371" Action="Error" />
+    <Rule Id="CA5372" Action="Error" />
+    <Rule Id="CA5373" Action="Error" />
+    <Rule Id="CA5374" Action="Error" />
+    <Rule Id="CA5375" Action="Error" />
+    <Rule Id="CA5376" Action="Error" />
+    <Rule Id="CA5377" Action="Error" />
+    <Rule Id="CA5378" Action="Error" />
+    <Rule Id="CA5379" Action="Error" />
+    <Rule Id="CA5380" Action="Error" />
+    <Rule Id="CA5381" Action="Error" />
+    <Rule Id="CA5382" Action="Error" />
+    <Rule Id="CA5383" Action="Error" />
+    <Rule Id="CA5384" Action="Error" />
+    <Rule Id="CA5385" Action="Error" />
+    <Rule Id="CA5386" Action="Error" />
+    <Rule Id="CA5387" Action="Error" />
+    <Rule Id="CA5388" Action="Error" />
+    <Rule Id="CA5389" Action="Error" />
+    
+    <!-- 网络安全规则 -->
+    <Rule Id="CA5390" Action="Error" />
+    <Rule Id="CA5391" Action="Error" />
+    <Rule Id="CA5392" Action="Error" />
+    <Rule Id="CA5393" Action="Error" />
+    <Rule Id="CA5394" Action="Error" />
+    <Rule Id="CA5395" Action="Error" />
+    <Rule Id="CA5396" Action="Error" />
+    <Rule Id="CA5397" Action="Error" />
+    <Rule Id="CA5398" Action="Error" />
+    <Rule Id="CA5399" Action="Error" />
+    
+    <!-- Web安全规则 -->
+    <Rule Id="CA5400" Action="Error" />
+    <Rule Id="CA5401" Action="Error" />
+    <Rule Id="CA5402" Action="Error" />
+    <Rule Id="CA5403" Action="Error" />
+    
+    <!-- 一般安全规则 -->
+    <Rule Id="CA3001" Action="Error" />
+    <Rule Id="CA3002" Action="Error" />
+    <Rule Id="CA3003" Action="Error" />
+    <Rule Id="CA3004" Action="Error" />
+    <Rule Id="CA3005" Action="Error" />
+    <Rule Id="CA3006" Action="Error" />
+    <Rule Id="CA3007" Action="Error" />
+    <Rule Id="CA3008" Action="Error" />
+    <Rule Id="CA3009" Action="Error" />
+    <Rule Id="CA3010" Action="Error" />
+    <Rule Id="CA3011" Action="Error" />
+    <Rule Id="CA3012" Action="Error" />
+    
+    <!-- 设计安全规则 -->
+    <Rule Id="CA5363" Action="Error" />
+    <Rule Id="CA5364" Action="Error" />
+    <Rule Id="CA5365" Action="Error" />
+    
+    <!-- 常见漏洞规则 -->
+    <Rule Id="CA1001" Action="Error" />
+    <Rule Id="CA1009" Action="Error" />
+    <Rule Id="CA1056" Action="Error" />
+    <Rule Id="CA1057" Action="Error" />
+    <Rule Id="CA1058" Action="Error" />
+    <Rule Id="CA1063" Action="Error" />
+    
+    <!-- 命名规则 -->
+    <Rule Id="CA1707" Action="Error" />
+    <Rule Id="CA1708" Action="Error" />
+    <Rule Id="CA1709" Action="Error" />
+    <Rule Id="CA1710" Action="Error" />
+    <Rule Id="CA1711" Action="Error" />
+    <Rule Id="CA1712" Action="Error" />
+    <Rule Id="CA1713" Action="Error" />
+    <Rule Id="CA1714" Action="Error" />
+    <Rule Id="CA1715" Action="Error" />
+    <Rule Id="CA1716" Action="Error" />
+    <Rule Id="CA1717" Action="Error" />
+    <Rule Id="CA1718" Action="Error" />
+    <Rule Id="CA1719" Action="Error" />
+    <Rule Id="CA1720" Action="Error" />
+    <Rule Id="CA1721" Action="Error" />
+    <Rule Id="CA1722" Action="Error" />
+    <Rule Id="CA1723" Action="Error" />
+    <Rule Id="CA1724" Action="Error" />
+    <Rule Id="CA1725" Action="Error" />
+    <Rule Id="CA1726" Action="Error" />
+    <Rule Id="CA1727" Action="Error" />
+    <Rule Id="CA1728" Action="Error" />
+    <Rule Id="CA1729" Action="Error" />
+    <Rule Id="CA1730" Action="Error" />
+    <Rule Id="CA1731" Action="Error" />
+    
+    <!-- 性能规则 -->
+    <Rule Id="CA1800" Action="Error" />
+    <Rule Id="CA1801" Action="Error" />
+    <Rule Id="CA1802" Action="Error" />
+    <Rule Id="CA1804" Action="Error" />
+    <Rule Id="CA1805" Action="Error" />
+    <Rule Id="CA1806" Action="Error" />
+    <Rule Id="CA1809" Action="Error" />
+    <Rule Id="CA1810" Action="Error" />
+    <Rule Id="CA1811" Action="Error" />
+    <Rule Id="CA1812" Action="Error" />
+    <Rule Id="CA1813" Action="Error" />
+    <Rule Id="CA1814" Action="Error" />
+    <Rule Id="CA1815" Action="Error" />
+    <Rule Id="CA1816" Action="Error" />
+    <Rule Id="CA1819" Action="Error" />
+    <Rule Id="CA1820" Action="Error" />
+    <Rule Id="CA1821" Action="Error" />
+    <Rule Id="CA1822" Action="Error" />
+    <Rule Id="CA1823" Action="Error" />
+    <Rule Id="CA1824" Action="Error" />
+    <Rule Id="CA1825" Action="Error" />
+    <Rule Id="CA1826" Action="Error" />
+    
+    <!-- 维护性规则 -->
+    <Rule Id="CA1501" Action="Error" />
+    <Rule Id="CA1502" Action="Error" />
+    <Rule Id="CA1505" Action="Error" />
+    <Rule Id="CA1506" Action="Error" />
+    <Rule Id="CA1507" Action="Error" />
+    <Rule Id="CA1508" Action="Error" />
+    <Rule Id="CA1509" Action="Error" />
+    <Rule Id="CA1510" Action="Error" />
+    <Rule Id="CA1511" Action="Error" />
+    <Rule Id="CA1512" Action="Error" />
+    <Rule Id="CA1513" Action="Error" />
+    
+    <!-- 可靠性规则 -->
+    <Rule Id="CA2000" Action="Error" />
+    <Rule Id="CA2001" Action="Error" />
+    <Rule Id="CA2002" Action="Error" />
+    <Rule Id="CA2003" Action="Error" />
+    <Rule Id="CA2004" Action="Error" />
+    <Rule Id="CA2005" Action="Error" />
+    <Rule Id="CA2006" Action="Error" />
+    <Rule Id="CA2007" Action="Error" />
+    <Rule Id="CA2008" Action="Error" />
+    <Rule Id="CA2009" Action="Error" />
+    <Rule Id="CA2010" Action="Error" />
+    <Rule Id="CA2011" Action="Error" />
+    <Rule Id="CA2012" Action="Error" />
+    <Rule Id="CA2013" Action="Error" />
+    <Rule Id="CA2014" Action="Error" />
+    <Rule Id="CA2015" Action="Error" />
+    <Rule Id="CA2016" Action="Error" />
+    <Rule Id="CA2017" Action="Error" />
+    <Rule Id="CA2018" Action="Error" />
+    <Rule Id="CA2019" Action="Error" />
+    <Rule Id="CA2020" Action="Error" />
+    <Rule Id="CA2021" Action="Error" />
+    <Rule Id="CA2022" Action="Error" />
+    
+    <!-- 使用规则 -->
+    <Rule Id="CA2200" Action="Error" />
+    <Rule Id="CA2201" Action="Error" />
+    <Rule Id="CA2202" Action="Error" />
+    <Rule Id="CA2204" Action="Error" />
+    <Rule Id="CA2205" Action="Error" />
+    <Rule Id="CA2207" Action="Error" />
+    <Rule Id="CA2208" Action="Error" />
+    <Rule Id="CA2210" Action="Error" />
+    <Rule Id="CA2211" Action="Error" />
+    <Rule Id="CA2212" Action="Error" />
+    <Rule Id="CA2213" Action="Error" />
+    <Rule Id="CA2214" Action="Error" />
+    <Rule Id="CA2215" Action="Error" />
+    <Rule Id="CA2216" Action="Error" />
+    <Rule Id="CA2217" Action="Error" />
+    <Rule Id="CA2218" Action="Error" />
+    <Rule Id="CA2219" Action="Error" />
+    <Rule Id="CA2220" Action="Error" />
+    <Rule Id="CA2221" Action="Error" />
+    <Rule Id="CA2222" Action="Error" />
+    <Rule Id="CA2223" Action="Error" />
+    <Rule Id="CA2224" Action="Error" />
+    <Rule Id="CA2225" Action="Error" />
+    <Rule Id="CA2226" Action="Error" />
+    <Rule Id="CA2227" Action="Error" />
+    <Rule Id="CA2228" Action="Error" />
+    <Rule Id="CA2229" Action="Error" />
+    <Rule Id="CA2230" Action="Error" />
+    <Rule Id="CA2231" Action="Error" />
+    <Rule Id="CA2232" Action="Error" />
+    <Rule Id="CA2233" Action="Error" />
+    <Rule Id="CA2234" Action="Error" />
+    <Rule Id="CA2235" Action="Error" />
+    <Rule Id="CA2236" Action="Error" />
+    <Rule Id="CA2237" Action="Error" />
+    <Rule Id="CA2238" Action="Error" />
+    <Rule Id="CA2239" Action="Error" />
+    <Rule Id="CA2240" Action="Error" />
+    <Rule Id="CA2241" Action="Error" />
+  </Rules>
+</RuleSet>

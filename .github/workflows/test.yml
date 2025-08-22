@@ -1,0 +1,295 @@
+name: KeyForge Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  DOTNET_VERSION: '9.0.x'
+  TEST_PROJECT: 'KeyForge.Tests.sln'
+  CONFIGURATION: 'Release'
+
+jobs:
+  test:
+    runs-on: windows-latest
+    
+    strategy:
+      matrix:
+        test-category: [Unit, Integration, System, UAT]
+        
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+          
+    - name: Restore dependencies
+      run: dotnet restore ${{ env.TEST_PROJECT }}
+      
+    - name: Build solution
+      run: dotnet build ${{ env.TEST_PROJECT }} --configuration ${{ env.CONFIGURATION }} --no-restore
+      
+    - name: Run ${{ matrix.test-category }} Tests
+      run: dotnet test ${{ env.TEST_PROJECT }} --configuration ${{ env.CONFIGURATION }} --filter "TestCategory=${{ matrix.test-category }}" --verbosity normal --collect:"XPlat Code Coverage" --results-directory TestResults/${{ matrix.test-category }}
+      
+    - name: Generate Test Report
+      run: |
+        dotnet tool install -g dotnet-reportgenerator-globaltool
+        reportgenerator -reports:TestResults/${{ matrix.test-category }}/coverage.xml -targetdir:TestResults/${{ matrix.test-category }}/Report -reporttypes:HtmlInline_AzurePipelines;Cobertura
+        
+    - name: Upload Test Results
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results-${{ matrix.test-category }}
+        path: TestResults/${{ matrix.test-category }}/
+        
+    - name: Upload Coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: TestResults/${{ matrix.test-category }}/coverage.xml
+        flags: ${{ matrix.test-category }}
+        name: codecov-${{ matrix.test-category }}
+        
+    - name: Publish Test Results
+      uses: dorny/test-reporter@v1
+      if: success() || failure()
+      with:
+        name: ${{ matrix.test-category }} Tests
+        path: 'TestResults/${{ matrix.test-category }}/*.trx'
+        reporter: dotnet-trx
+        
+  performance:
+    runs-on: windows-latest
+    needs: test
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Restore dependencies
+      run: dotnet restore ${{ env.TEST_PROJECT }}
+      
+    - name: Build solution
+      run: dotnet build ${{ env.TEST_PROJECT }} --configuration ${{ env.CONFIGURATION }} --no-restore
+      
+    - name: Run Performance Tests
+      run: dotnet test ${{ env.TEST_PROJECT }} --configuration ${{ env.CONFIGURATION }} --filter "TestCategory=Performance" --verbosity normal
+      
+    - name: Upload Performance Results
+      uses: actions/upload-artifact@v3
+      with:
+        name: performance-results
+        path: TestResults/Performance/
+        
+  security:
+    runs-on: windows-latest
+    needs: test
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Run Security Analysis
+      run: |
+        dotnet tool install -g security-scan
+        security-scan --project ${{ env.TEST_PROJECT }} --output TestResults/Security/
+        
+    - name: Upload Security Results
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-results
+        path: TestResults/Security/
+        
+  quality:
+    runs-on: windows-latest
+    needs: [test, performance, security]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Download all artifacts
+      uses: actions/download-artifact@v3
+      
+    - name: Generate Quality Report
+      run: |
+        # 合并所有测试结果
+        mkdir -p TestResults/Combined
+        cp -r test-results-*/* TestResults/Combined/
+        cp -r performance-results/* TestResults/Combined/
+        cp -r security-results/* TestResults/Combined/
+        
+        # 生成综合质量报告
+        echo "Generating comprehensive quality report..."
+        echo "Test Results Summary:" > TestResults/Combined/quality-summary.md
+        echo "- Unit Tests: $(ls test-results-Unit/ | wc -l)" >> TestResults/Combined/quality-summary.md
+        echo "- Integration Tests: $(ls test-results-Integration/ | wc -l)" >> TestResults/Combined/quality-summary.md
+        echo "- System Tests: $(ls test-results-System/ | wc -l)" >> TestResults/Combined/quality-summary.md
+        echo "- UAT Tests: $(ls test-results-UAT/ | wc -l)" >> TestResults/Combined/quality-summary.md
+        echo "- Performance Tests: $(ls performance-results/ | wc -l)" >> TestResults/Combined/quality-summary.md
+        echo "- Security Tests: $(ls security-results/ | wc -l)" >> TestResults/Combined/quality-summary.md
+        
+    - name: Upload Quality Report
+      uses: actions/upload-artifact@v3
+      with:
+        name: quality-report
+        path: TestResults/Combined/
+        
+    - name: Comment PR with Quality Report
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const path = 'TestResults/Combined/quality-summary.md';
+          
+          if (fs.existsSync(path)) {
+            const summary = fs.readFileSync(path, 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🧪 Quality Report\n\n${summary}\n\n📊 **Detailed Results:**\n- View the full test results in the artifacts below\n- Coverage reports are available in the artifacts\n- Performance benchmarks are included in the performance results`
+            });
+          }
+          
+  deploy-staging:
+    runs-on: windows-latest
+    needs: quality
+    if: github.ref == 'refs/heads/develop'
+    environment: staging
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Restore dependencies
+      run: dotnet restore ${{ env.TEST_PROJECT }}
+      
+    - name: Build for Release
+      run: dotnet publish ${{ env.TEST_PROJECT }} --configuration ${{ env.CONFIGURATION }} --output ./publish
+      
+    - name: Package Application
+      run: |
+        Compress-Archive -Path ./publish/* -DestinationPath KeyForge-Staging.zip
+        
+    - name: Deploy to Staging
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: 'keyforge-staging'
+        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+        package: './KeyForge-Staging.zip'
+        
+    - name: Run Smoke Tests
+      run: |
+        # 运行冒烟测试验证部署
+        dotnet test ${{ env.TEST_PROJECT }} --filter "TestCategory=SmokeTest" --verbosity normal
+        
+    - name: Notify Deployment
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        channel: '#deployments'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+        
+  deploy-production:
+    runs-on: windows-latest
+    needs: quality
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Restore dependencies
+      run: dotnet restore ${{ env.TEST_PROJECT }}
+      
+    - name: Build for Release
+      run: dotnet publish ${{ env.TEST_PROJECT }} --configuration ${{ env.CONFIGURATION }} --output ./publish
+      
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ github.run_number }}
+        release_name: Release v${{ github.run_number }}
+        draft: false
+        prerelease: false
+        
+    - name: Package Application
+      run: |
+        Compress-Archive -Path ./publish/* -DestinationPath KeyForge-Production.zip
+        
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./KeyForge-Production.zip
+        asset_name: KeyForge-Production.zip
+        asset_content_type: application/zip
+        
+    - name: Deploy to Production
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: 'keyforge-production'
+        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+        package: './KeyForge-Production.zip'
+        
+    - name: Run Production Tests
+      run: |
+        # 运行生产环境测试
+        dotnet test ${{ env.TEST_PROJECT }} --filter "TestCategory=Production" --verbosity normal
+        
+    - name: Notify Deployment
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        channel: '#deployments'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}

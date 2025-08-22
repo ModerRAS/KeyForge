@@ -1,0 +1,22 @@
+quality_gate:
+  coverage:
+    line: 60
+    branch: 55
+    method: 65
+    
+  performance:
+    max_execution_time: 5000
+    max_memory_usage: 52428800
+    min_success_rate: 0.95
+    
+  reliability:
+    test_pass_rate: 100
+    flaky_tests: 0
+    
+  security:
+    no_vulnerabilities: true
+    code_smells: 50
+    
+  maintainability:
+    max_complexity: 10
+    max_duplication: 5

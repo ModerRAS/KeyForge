@@ -1,0 +1,33 @@
+{
+  "TestSettings": {
+    "TestTimeout": 30000,
+    "ParallelTestExecution": true,
+    "MaxParallelThreads": 4,
+    "CoverageThreshold": 60,
+    "TestDataPath": "TestData/",
+    "OutputPath": "TestResults/",
+    "EnableTracing": false
+  },
+  "DatabaseSettings": {
+    "UseInMemoryDatabase": true,
+    "ConnectionString": "Data Source=:memory:",
+    "SeedTestData": true,
+    "CleanupAfterTest": true
+  },
+  "PerformanceSettings": {
+    "MaxExecutionTime": 5000,
+    "MaxMemoryUsage": 52428800,
+    "MinSuccessRate": 0.95,
+    "EnableProfiling": false
+  },
+  "LoggingSettings": {
+    "LogLevel": "Warning",
+    "LogToFile": false,
+    "LogToConsole": true
+  },
+  "MockSettings": {
+    "StrictBehavior": false,
+    "CallBase": false,
+    "DefaultDefaultValueProvider": "Loose"
+  }
+}

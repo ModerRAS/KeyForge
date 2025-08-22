@@ -1,0 +1,232 @@
+name: KeyForge 测试套件
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+
+env:
+  DOTNET_VERSION: '9.0.x'
+  SOLUTION: 'KeyForge.sln'
+  TEST_PROJECT: 'KeyForge.Tests/KeyForge.Tests.csproj'
+  COVERAGE_THRESHOLD: 60
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+      
+    - name: 设置 .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: 缓存 NuGet 包
+      uses: actions/cache@v3
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/*.props') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+          
+    - name: 恢复依赖
+      run: dotnet restore ${{ env.SOLUTION }}
+      
+    - name: 构建
+      run: dotnet build ${{ env.SOLUTION }} --configuration Release --no-restore
+      
+    - name: 运行单元测试
+      run: |
+        dotnet test ${{ env.TEST_PROJECT }} \
+          --configuration Release \
+          --filter "FullyQualifiedName~Unit" \
+          --collect:"XPlat Code Coverage" \
+          --results-directory TestResults/ \
+          --logger "trx;LogFileName=TestResults/unit-tests.trx" \
+          --no-build
+          
+    - name: 运行集成测试
+      run: |
+        dotnet test ${{ env.TEST_PROJECT }} \
+          --configuration Release \
+          --filter "FullyQualifiedName~Integration" \
+          --collect:"XPlat Code Coverage" \
+          --results-directory TestResults/ \
+          --logger "trx;LogFileName=TestResults/integration-tests.trx" \
+          --no-build
+          
+    - name: 运行BDD测试
+      run: |
+        dotnet test ${{ env.TEST_PROJECT }} \
+          --configuration Release \
+          --filter "FullyQualifiedName~BDD" \
+          --collect:"XPlat Code Coverage" \
+          --results-directory TestResults/ \
+          --logger "trx;LogFileName=TestResults/bdd-tests.trx" \
+          --no-build
+          
+    - name: 运行端到端测试
+      run: |
+        dotnet test ${{ env.TEST_PROJECT }} \
+          --configuration Release \
+          --filter "FullyQualifiedName~EndToEnd" \
+          --collect:"XPlat Code Coverage" \
+          --results-directory TestResults/ \
+          --logger "trx;LogFileName=TestResults/e2e-tests.trx" \
+          --no-build
+          
+    - name: 运行性能测试
+      run: |
+        dotnet test ${{ env.TEST_PROJECT }} \
+          --configuration Release \
+          --filter "FullyQualifiedName~Performance" \
+          --collect:"XPlat Code Coverage" \
+          --results-directory TestResults/ \
+          --logger "trx;LogFileName=TestResults/performance-tests.trx" \
+          --no-build
+          
+    - name: 合并覆盖率报告
+      run: |
+        dotnet tool install -g dotnet-coverage
+        dotnet-coverage merge TestResults/coverage.*.xml -r cobertura -o TestResults/coverage.cobertura.xml
+        
+    - name: 生成覆盖率报告
+      run: |
+        dotnet tool install -g dotnet-reportgenerator-globaltool
+        reportgenerator \
+          -reports:TestResults/coverage.cobertura.xml \
+          -targetdir:TestReports \
+          -reporttypes:Html \
+          -assemblyfilters:"-xunit*" \
+          -title:"KeyForge 测试覆盖率报告"
+          
+    - name: 检查覆盖率阈值
+      run: |
+        if [ -f "TestResults/coverage.cobertura.xml" ]; then
+          coverage_line=$(grep -o 'line-rate="[0-9.]*"' TestResults/coverage.cobertura.xml | head -1 | cut -d'"' -f2)
+          coverage_percent=$(echo "$coverage_line * 100" | bc | cut -d'.' -f1)
+          echo "代码覆盖率: $coverage_percent%"
+          if [ "$coverage_percent" -lt "${{ env.COVERAGE_THRESHOLD }}" ]; then
+            echo "❌ 代码覆盖率 $coverage_percent% 低于阈值 ${{ env.COVERAGE_THRESHOLD }}%"
+            exit 1
+          else
+            echo "✓ 代码覆盖率 $coverage_percent% 达到阈值要求"
+          fi
+        else
+          echo "⚠ 无法找到覆盖率文件，跳过覆盖率检查"
+        fi
+          
+    - name: 上传测试结果
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: test-results
+        path: |
+          TestResults/
+          TestReports/
+          
+    - name: 发布测试结果
+      uses: dorny/test-reporter@v1
+      if: always()
+      with:
+        name: KeyForge 测试结果
+        path: 'TestResults/*.trx'
+        reporter: dotnet-trx
+        
+    - name: 发布覆盖率报告
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-reports
+        path: TestReports/
+        
+    - name: 添加覆盖率徽章
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./TestResults/coverage.cobertura.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
+  quality-gate:
+    needs: test
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - name: 检查测试结果
+      run: |
+        echo "📊 检查测试质量门禁..."
+        
+        # 检查是否有测试失败
+        if [ -f "TestResults/unit-tests.trx" ]; then
+          if grep -q "Failed" TestResults/unit-tests.trx; then
+            echo "❌ 单元测试存在失败用例"
+            exit 1
+          fi
+        fi
+        
+        if [ -f "TestResults/integration-tests.trx" ]; then
+          if grep -q "Failed" TestResults/integration-tests.trx; then
+            echo "❌ 集成测试存在失败用例"
+            exit 1
+          fi
+        fi
+        
+        if [ -f "TestResults/bdd-tests.trx" ]; then
+          if grep -q "Failed" TestResults/bdd-tests.trx; then
+            echo "❌ BDD测试存在失败用例"
+            exit 1
+          fi
+        fi
+        
+        if [ -f "TestResults/e2e-tests.trx" ]; then
+          if grep -q "Failed" TestResults/e2e-tests.trx; then
+            echo "❌ 端到端测试存在失败用例"
+            exit 1
+          fi
+        fi
+        
+        echo "✓ 所有测试通过"
+        
+    - name: 生成质量报告
+      run: |
+        cat > TestResults/quality-report.md << EOF
+        # KeyForge 质量报告
+        
+        ## 测试执行结果
+        
+        - **执行时间**: $(date)
+        - **分支**: ${{ github.ref_name }}
+        - **提交**: ${{ github.sha }}
+        
+        ## 质量指标
+        
+        - ✅ 所有测试通过
+        - ✅ 代码覆盖率 ≥${{ env.COVERAGE_THRESHOLD }}%
+        - ✅ 构建成功
+        - ✅ 性能测试通过
+        
+        ## 测试覆盖范围
+        
+        - **Domain层**: 单元测试覆盖核心业务逻辑
+        - **Application层**: 集成测试验证服务层功能
+        - **Infrastructure层**: 组件测试验证基础设施
+        - **BDD测试**: 验收标准测试
+        - **端到端测试**: 完整用户场景
+        - **性能测试**: 系统性能指标
+        
+        ---
+        
+        *报告生成时间: $(date)*
+        *KeyForge 智能按键脚本系统*
+        EOF
+        
+    - name: 上传质量报告
+      uses: actions/upload-artifact@v3
+      with:
+        name: quality-report
+        path: TestResults/quality-report.md

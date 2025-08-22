@@ -1,0 +1,379 @@
+name: KeyForge CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop, feature/* ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  NODE_VERSION: '18.x'
+  BUILD_CONFIGURATION: 'Release'
+  SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+  COVERALLS_TOKEN: ${{ secrets.COVERALLS_TOKEN }}
+  NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+  TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    outputs:
+      coverage: ${{ steps.coverage.outputs.percentage }}
+      test-results: ${{ steps.test.outputs.results }}
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        cache: true
+        cache-dependency-path: '**/packages.lock.json'
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+    
+    - name: Restore dependencies
+      run: |
+        dotnet restore
+        dotnet tool install --global dotnet-sonarscanner
+        dotnet tool install --global coverlet.console
+    
+    - name: Build Solution
+      run: |
+        dotnet build --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore
+    
+    - name: Run Unit Tests
+      run: |
+        dotnet test KeyForge.Tests/KeyForge.Tests.csproj \
+          --configuration ${{ env.BUILD_CONFIGURATION }} \
+          --no-build \
+          --collect:"XPlat Code Coverage" \
+          --results-directory TestResults/ \
+          --logger "trx;LogFileName=unit-tests.trx" \
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+    
+    - name: Run Integration Tests
+      run: |
+        dotnet test KeyForge.Tests/KeyForge.Tests.csproj \
+          --configuration ${{ env.BUILD_CONFIGURATION }} \
+          --no-build \
+          --filter "FullyQualifiedName~Integration" \
+          --collect:"XPlat Code Coverage" \
+          --results-directory TestResults/ \
+          --logger "trx;LogFileName=integration-tests.trx"
+    
+    - name: Run Performance Tests
+      run: |
+        cd KeyForge.Tests/Performance
+        dotnet run --configuration Release -- quick
+    
+    - name: Run Security Tests
+      run: |
+        cd KeyForge.Tests/Security
+        dotnet run --configuration Release -- quick
+    
+    - name: Generate Coverage Report
+      run: |
+        reportgenerator -reports:TestResults/**/coverage.opencover.xml -targetdir:coverage-report -reporttypes:Html,Xml,Markdown
+    
+    - name: Upload Coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./coverage-report/coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+    
+    - name: Upload Coverage to Coveralls
+      uses: coverallsapp/github-action@v2
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        path-to-lcov: ./coverage-report/coverage.xml
+    
+    - name: Upload Test Results
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results
+        path: TestResults/
+    
+    - name: Upload Coverage Report
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: coverage-report/
+    
+    - name: Publish Test Results
+      uses: dorny/test-reporter@v1
+      with:
+        name: Test Results
+        path: 'TestResults/*.trx'
+        reporter: dotnet-trx
+    
+    - name: Comment Coverage
+      if: github.event_name == 'pull_request'
+      uses: romeovs/lcov-reporter-action@v0.3.1
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        lcov-file: ./coverage-report/coverage.xml
+
+  code-quality:
+    name: Code Quality Analysis
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+    
+    - name: SonarQube Scan
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      run: |
+        dotnet sonarscanner begin /k:"keyforge" /o:"keyforge" /d:sonar.login="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="${{ vars.SONARQUBE_URL }}"
+        dotnet build --configuration ${{ env.BUILD_CONFIGURATION }}
+        dotnet sonarscanner end /d:sonar.login="${{ secrets.SONAR_TOKEN }}"
+    
+    - name: Run Security Code Scan
+      run: |
+        dotnet build --configuration ${{ env.BUILD_CONFIGURATION }}
+        dotnet install tool --global security-scan
+        security-scan --project-key keyforge --output security-scan-report.json
+    
+    - name: Upload Security Scan Results
+      uses: actions/upload-artifact@v4
+      with:
+        name: security-scan-results
+        path: security-scan-report.json
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+    
+    - name: Run OWASP ZAP Scan
+      uses: zaproxy/action-baseline@v0.11.0
+      with:
+        target: 'http://localhost:5000'
+        rules_file_name: '.zap/rules.tsv'
+        cmd_options: '-a'
+    
+    - name: Run Security Tests
+      run: |
+        cd KeyForge.Tests/Security
+        dotnet run --configuration Release -- scan
+    
+    - name: Upload Security Reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: security-reports
+        path: |
+          SecurityReports/
+          .zap/
+
+  performance-test:
+    name: Performance Test
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+    
+    - name: Run Performance Tests
+      run: |
+        cd KeyForge.Tests/Performance
+        dotnet run --configuration Release -- full
+    
+    - name: Upload Performance Reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: performance-reports
+        path: |
+          PerformanceReports/
+          BenchmarkDotNet.Artifacts/
+
+  e2e-test:
+    name: E2E Test
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+    
+    - name: Install Playwright
+      run: |
+        npm install -g @playwright/test
+        npx playwright install chromium
+    
+    - name: Run E2E Tests
+      run: |
+        npx playwright test e2e/ --reporter=html
+    
+    - name: Upload E2E Test Results
+      uses: actions/upload-artifact@v4
+      with:
+        name: e2e-test-results
+        path: |
+          e2e-test-results/
+          playwright-report/
+
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [build, code-quality, security-scan, performance-test, e2e-test]
+    if: github.ref == 'refs/heads/main'
+    environment: staging
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+    
+    - name: Publish Application
+      run: |
+        dotnet publish KeyForge.Presentation/KeyForge.Presentation.csproj \
+          --configuration ${{ env.BUILD_CONFIGURATION }} \
+          --output ./publish \
+          --no-restore
+    
+    - name: Deploy to Staging
+      uses: azure/webapps-deploy@v3
+      with:
+        app-name: 'keyforge-staging'
+        publish-profile: ${{ secrets.AZURE_STAGING_PUBLISH_PROFILE }}
+        package: ./publish
+    
+    - name: Run Smoke Tests
+      run: |
+        echo "Running smoke tests against staging..."
+        curl -f https://keyforge-staging.azurewebsites.net/health || exit 1
+    
+    - name: Notify Deployment
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        channel: '#deployments'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build, code-quality, security-scan, performance-test, e2e-test, deploy-staging]
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+    
+    - name: Publish Application
+      run: |
+        dotnet publish KeyForge.Presentation/KeyForge.Presentation.csproj \
+          --configuration ${{ env.BUILD_CONFIGURATION }} \
+          --output ./publish \
+          --no-restore
+    
+    - name: Deploy to Production
+      uses: azure/webapps-deploy@v3
+      with:
+        app-name: 'keyforge-production'
+        publish-profile: ${{ secrets.AZURE_PRODUCTION_PUBLISH_PROFILE }}
+        package: ./publish
+    
+    - name: Run Smoke Tests
+      run: |
+        echo "Running smoke tests against production..."
+        curl -f https://keyforge-production.azurewebsites.net/health || exit 1
+    
+    - name: Notify Deployment
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        channel: '#deployments'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  notify:
+    name: Notify Results
+    runs-on: ubuntu-latest
+    needs: [build, code-quality, security-scan, performance-test, e2e-test]
+    if: always()
+    
+    steps:
+    - name: Notify Slack
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ needs.build.result }}
+        channel: '#ci-cd'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+        fields: repo,message,commit,author,action,eventName,ref,workflow
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+    
+    - name: Notify Teams
+      uses: dhollerbach/github-action-send-message-to-ms-teams@v1.1.0
+      with:
+        webhook_url: ${{ secrets.TEAMS_WEBHOOK_URL }}
+        title: "CI/CD Pipeline Status"
+        text: |
+          **Repository**: ${{ github.repository }}
+          **Branch**: ${{ github.ref }}
+          **Commit**: ${{ github.sha }}
+          **Build Status**: ${{ needs.build.result }}
+          **Code Quality**: ${{ needs.code-quality.result }}
+          **Security Scan**: ${{ needs.security-scan.result }}
+          **Performance Test**: ${{ needs.performance-test.result }}
+          **E2E Test**: ${{ needs.e2e-test.result }}
+          **Coverage**: ${{ needs.build.outputs.coverage }}%
+          **Run URL**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
