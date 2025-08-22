@@ -1,5 +1,11 @@
 # KeyForge - 智能按键脚本系统
 
+[![Build Status](https://github.com/ModerRAS/KeyForge/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/ModerRAS/KeyForge/actions/workflows/build-and-test.yml)
+[![UAT Testing](https://github.com/ModerRAS/KeyForge/actions/workflows/uat-testing.yml/badge.svg)](https://github.com/ModerRAS/KeyForge/actions/workflows/uat-testing.yml)
+[![Code Quality](https://github.com/ModerRAS/KeyForge/actions/workflows/code-quality.yml/badge.svg)](https://github.com/ModerRAS/KeyForge/actions/workflows/code-quality.yml)
+[![Release](https://github.com/ModerRAS/KeyForge/actions/workflows/release.yml/badge.svg)](https://github.com/ModerRAS/KeyForge/actions/workflows/release.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 ## 项目概述
 
 KeyForge 是一个基于 C# .NET 9 开发的智能化游戏自动化按键脚本系统，采用领域驱动设计（DDD）架构，具备屏幕识别、智能决策、精确执行和完整监控能力。

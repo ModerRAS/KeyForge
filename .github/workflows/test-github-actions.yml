@@ -1,0 +1,61 @@
+name: Test GitHub Actions
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  test-basic:
+    name: Basic Test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+        
+    - name: Test basic functionality
+      run: |
+        echo "Testing GitHub Actions setup..."
+        echo "Current directory: $(pwd)"
+        echo "Files in directory:"
+        ls -la
+        
+    - name: Test .NET SDK
+      run: |
+        dotnet --version
+        dotnet --list-sdks
+        
+    - name: Test project structure
+      run: |
+        if [ -f "KeyForge-Simplified.sln" ]; then
+          echo "✅ Solution file found"
+        else
+          echo "❌ Solution file not found"
+          exit 1
+        fi
+        
+    - name: Generate test report
+      run: |
+        echo "# GitHub Actions Test Report" > test-report.md
+        echo "## Test Date: $(date)" >> test-report.md
+        echo "## Test Results" >> test-report.md
+        echo "- ✅ .NET SDK setup" >> test-report.md
+        echo "- ✅ Project structure" >> test-report.md
+        echo "- ✅ Basic functionality" >> test-report.md
+        echo "" >> test-report.md
+        echo "## Environment" >> test-report.md
+        echo "- OS: Ubuntu Latest" >> test-report.md
+        echo "- .NET Version: 8.0.x" >> test-report.md
+        echo "- GitHub Actions: Working" >> test-report.md
+        
+    - name: Upload test report
+      uses: actions/upload-artifact@v3
+      with:
+        name: github-actions-test-report
+        path: test-report.md
