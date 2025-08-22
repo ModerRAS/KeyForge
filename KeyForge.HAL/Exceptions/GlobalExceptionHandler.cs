@@ -1,23 +1,19 @@
 using KeyForge.HAL.Abstractions;
 using KeyForge.HAL.Exceptions;
-using Serilog;
-using Serilog.Events;
 
 namespace KeyForge.HAL.Exceptions;
 
 /// <summary>
-/// 全局异常处理器
-/// 这是简化实现，专注于核心功能
+/// 全局异常处理器（简化版）
+/// 完整实现：包含完整的异常处理、日志记录和报告功能
+/// 简化实现：移除对ILogger和Serilog的依赖，专注于核心功能
 /// </summary>
 public class GlobalExceptionHandler : IDisposable
 {
-    private readonly ILogger<GlobalExceptionHandler> _logger;
     private readonly IServiceProvider _serviceProvider;
     private readonly object _lock = new();
     private bool _isDisposed;
 
-    // Serilog配置
-    private ILogger? _serilogLogger;
     private readonly List<ExceptionEventHandler> _exceptionHandlers = new();
 
     /// <summary>
@@ -33,18 +29,13 @@ public class GlobalExceptionHandler : IDisposable
     public event ExceptionEventHandler? OnException;
 
     /// <summary>
-    /// 初始化全局异常处理器
+    /// 初始化全局异常处理器（简化版）
     /// </summary>
-    /// <param name="logger">日志服务</param>
     /// <param name="serviceProvider">服务提供者</param>
-    public GlobalExceptionHandler(
-        ILogger<GlobalExceptionHandler> logger,
-        IServiceProvider serviceProvider)
+    public GlobalExceptionHandler(IServiceProvider serviceProvider)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         
-        InitializeSerilog();
         SubscribeToGlobalExceptions();
     }
 
@@ -61,17 +52,13 @@ public class GlobalExceptionHandler : IDisposable
             lock (_lock)
             {
                 var halException = ConvertToHALException(exception, context);
-                LogException(halException);
                 NotifyExceptionHandlers(halException);
-                
-                _logger.LogError(halException, "Exception handled: {ExceptionType}", halException.ExceptionType);
             }
             
             return await Task.FromResult(true);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to handle exception: {OriginalException}", exception.Message);
             return false;
         }
     }
@@ -87,17 +74,13 @@ public class GlobalExceptionHandler : IDisposable
         {
             lock (_lock)
             {
-                LogException(halException);
                 NotifyExceptionHandlers(halException);
-                
-                _logger.LogError(halException, "HAL exception handled: {ExceptionType}", halException.ExceptionType);
             }
             
             return await Task.FromResult(true);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to handle HAL exception: {ExceptionType}", halException.ExceptionType);
             return false;
         }
     }
@@ -111,7 +94,6 @@ public class GlobalExceptionHandler : IDisposable
         lock (_lock)
         {
             _exceptionHandlers.Add(handler);
-            _logger.LogDebug("Exception handler added: {Handler}", handler.Target?.GetType().Name ?? "Unknown");
         }
     }
 
@@ -124,7 +106,6 @@ public class GlobalExceptionHandler : IDisposable
         lock (_lock)
         {
             _exceptionHandlers.Remove(handler);
-            _logger.LogDebug("Exception handler removed: {Handler}", handler.Target?.GetType().Name ?? "Unknown");
         }
     }
 
@@ -153,8 +134,6 @@ public class GlobalExceptionHandler : IDisposable
     {
         try
         {
-            _logger.LogInformation("Generating exception report for range: {Start} to {End}", timeRange.Start, timeRange.End);
-
             var report = new ExceptionReport
             {
                 GeneratedAt = DateTime.UtcNow,
@@ -168,12 +147,10 @@ public class GlobalExceptionHandler : IDisposable
                 Recommendations = GenerateExceptionRecommendations()
             };
 
-            _logger.LogInformation("Exception report generated successfully");
             return report;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to generate exception report");
             return new ExceptionReport
             {
                 GeneratedAt = DateTime.UtcNow,
@@ -226,19 +203,8 @@ public class GlobalExceptionHandler : IDisposable
     /// </summary>
     private void InitializeSerilog()
     {
-        try
         {
-            _serilogLogger = new LoggerConfiguration()
-                .MinimumLevel.Debug()
-                .WriteTo.Console()
-                .WriteTo.File("logs/hal-exceptions-.txt", rollingInterval: RollingInterval.Day)
-                .CreateLogger();
-
-            _logger.LogDebug("Serilog initialized successfully");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to initialize Serilog");
+            // 简化实现：不初始化Serilog
         }
     }
 
@@ -251,12 +217,10 @@ public class GlobalExceptionHandler : IDisposable
         {
             AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
             TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
-            
-            _logger.LogDebug("Global exception handlers subscribed");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to subscribe to global exceptions");
+            // 简化实现：忽略订阅错误
         }
     }
 
@@ -281,7 +245,7 @@ public class GlobalExceptionHandler : IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to handle unhandled exception");
+            // 简化实现：忽略处理错误
         }
     }
 
@@ -303,7 +267,7 @@ public class GlobalExceptionHandler : IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to handle unobserved task exception");
+            // 简化实现：忽略处理错误
         }
     }
 
@@ -358,37 +322,23 @@ public class GlobalExceptionHandler : IDisposable
     /// <param name="halException">HAL异常</param>
     private void LogException(HALException halException)
     {
-        try
-        {
-            // 使用Serilog记录结构化日志
-            _serilogLogger?.Write(ConvertToSerilogLevel(halException.Severity), halException, 
-                "HAL Exception: {ExceptionType} in {Component}", 
-                halException.ExceptionType, halException.Component);
-            
-            // 使用标准日志记录
-            _logger.LogError(halException, "HAL Exception: {ExceptionType} in {Component}", 
-                halException.ExceptionType, halException.Component);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to log exception: {ExceptionType}", halException.ExceptionType);
-        }
+        // 简化实现：不记录日志
     }
 
     /// <summary>
-    /// 转换为Serilog级别
+    /// 转换为Serilog级别（简化版）
     /// </summary>
     /// <param name="severity">严重程度</param>
     /// <returns>Serilog级别</returns>
-    private static LogEventLevel ConvertToSerilogLevel(ExceptionSeverity severity)
+    private static int ConvertToSerilogLevel(ExceptionSeverity severity)
     {
         return severity switch
         {
-            ExceptionSeverity.Critical => LogEventLevel.Fatal,
-            ExceptionSeverity.Error => LogEventLevel.Error,
-            ExceptionSeverity.Warning => LogEventLevel.Warning,
-            ExceptionSeverity.Info => LogEventLevel.Information,
-            _ => LogEventLevel.Error
+            ExceptionSeverity.Critical => 4,
+            ExceptionSeverity.Error => 3,
+            ExceptionSeverity.Warning => 2,
+            ExceptionSeverity.Info => 1,
+            _ => 3
         };
     }
 
@@ -419,13 +369,13 @@ public class GlobalExceptionHandler : IDisposable
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Exception handler failed");
+                    // 简化实现：忽略处理器错误
                 }
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to notify exception handlers");
+            // 简化实现：忽略通知错误
         }
     }
 

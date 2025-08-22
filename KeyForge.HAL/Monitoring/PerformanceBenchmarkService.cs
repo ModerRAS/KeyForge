@@ -3,26 +3,22 @@ using KeyForge.HAL.Abstractions;
 namespace KeyForge.HAL.Monitoring;
 
 /// <summary>
-/// 性能基准测试服务
-/// 这是简化实现，专注于核心功能
+/// 性能基准测试服务（简化版）
+/// 完整实现：包含完整的性能基准测试和报告功能
+/// 简化实现：移除对ILogger的依赖，专注于核心功能
 /// </summary>
 public class PerformanceBenchmarkService
 {
-    private readonly ILogger<PerformanceBenchmarkService> _logger;
     private readonly IPerformanceMonitor _performanceMonitor;
     private readonly object _lock = new();
     private bool _isDisposed;
 
     /// <summary>
-    /// 初始化性能基准测试服务
+    /// 初始化性能基准测试服务（简化版）
     /// </summary>
-    /// <param name="logger">日志服务</param>
     /// <param name="performanceMonitor">性能监控服务</param>
-    public PerformanceBenchmarkService(
-        ILogger<PerformanceBenchmarkService> logger,
-        IPerformanceMonitor performanceMonitor)
+    public PerformanceBenchmarkService(IPerformanceMonitor performanceMonitor)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _performanceMonitor = performanceMonitor ?? throw new ArgumentNullException(nameof(performanceMonitor));
     }
 
@@ -36,8 +32,6 @@ public class PerformanceBenchmarkService
     {
         try
         {
-            _logger.LogInformation("Starting keyboard benchmark with {Iterations} iterations", iterations);
-
             var request = new BenchmarkRequest
             {
                 TestName = "Keyboard_Input",
@@ -52,13 +46,10 @@ public class PerformanceBenchmarkService
             };
 
             var result = await _performanceMonitor.RunBenchmarkAsync(request);
-            
-            _logger.LogInformation("Keyboard benchmark completed: {Result}", result);
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to run keyboard benchmark");
             return new BenchmarkResult
             {
                 TestName = "Keyboard_Input",
@@ -78,8 +69,6 @@ public class PerformanceBenchmarkService
     {
         try
         {
-            _logger.LogInformation("Starting mouse benchmark with {Iterations} iterations", iterations);
-
             var request = new BenchmarkRequest
             {
                 TestName = "Mouse_Input",
@@ -94,13 +83,10 @@ public class PerformanceBenchmarkService
             };
 
             var result = await _performanceMonitor.RunBenchmarkAsync(request);
-            
-            _logger.LogInformation("Mouse benchmark completed: {Result}", result);
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to run mouse benchmark");
             return new BenchmarkResult
             {
                 TestName = "Mouse_Input",
@@ -120,8 +106,6 @@ public class PerformanceBenchmarkService
     {
         try
         {
-            _logger.LogInformation("Starting screen benchmark with {Iterations} iterations", iterations);
-
             var request = new BenchmarkRequest
             {
                 TestName = "Screen_Capture",
@@ -135,13 +119,10 @@ public class PerformanceBenchmarkService
             };
 
             var result = await _performanceMonitor.RunBenchmarkAsync(request);
-            
-            _logger.LogInformation("Screen benchmark completed: {Result}", result);
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to run screen benchmark");
             return new BenchmarkResult
             {
                 TestName = "Screen_Capture",
@@ -165,8 +146,6 @@ public class PerformanceBenchmarkService
     {
         try
         {
-            _logger.LogInformation("Starting image recognition benchmark with {Iterations} iterations", iterations);
-
             var request = new BenchmarkRequest
             {
                 TestName = "Image_Recognition",
@@ -180,13 +159,10 @@ public class PerformanceBenchmarkService
             };
 
             var result = await _performanceMonitor.RunBenchmarkAsync(request);
-            
-            _logger.LogInformation("Image recognition benchmark completed: {Result}", result);
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to run image recognition benchmark");
             return new BenchmarkResult
             {
                 TestName = "Image_Recognition",
@@ -205,8 +181,6 @@ public class PerformanceBenchmarkService
     {
         try
         {
-            _logger.LogInformation("Starting comprehensive benchmark test");
-
             var results = new List<BenchmarkResult>();
 
             // 键盘基准测试
@@ -237,12 +211,10 @@ public class PerformanceBenchmarkService
             };
             results.Add(comprehensiveResult);
 
-            _logger.LogInformation("Comprehensive benchmark completed with {Count} tests", results.Count);
             return results;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to run comprehensive benchmark");
             return new List<BenchmarkResult>
             {
                 new BenchmarkResult
@@ -264,8 +236,6 @@ public class PerformanceBenchmarkService
     {
         try
         {
-            _logger.LogInformation("Generating benchmark report with {Count} results", results.Count);
-
             var report = new PerformanceReport
             {
                 GeneratedAt = DateTime.UtcNow,
@@ -287,7 +257,6 @@ public class PerformanceBenchmarkService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to generate benchmark report");
             return new PerformanceReport
             {
                 GeneratedAt = DateTime.UtcNow,
