@@ -6,22 +6,16 @@
     <Nullable>enable</Nullable>
     <OutputType>Library</OutputType>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
-    <AssemblyTitle>KeyForge Core</AssemblyTitle>
-    <AssemblyDescription>KeyForge跨平台核心库</AssemblyDescription>
+    <AssemblyTitle>KeyForge Abstractions</AssemblyTitle>
+    <AssemblyDescription>KeyForge跨平台抽象层和接口定义</AssemblyDescription>
     <AssemblyVersion>2.0.0.0</AssemblyVersion>
     <FileVersion>2.0.0.0</FileVersion>
     <LangVersion>12.0</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\KeyForge.Abstractions\KeyForge.Abstractions.csproj" />
-    <ProjectReference Include="..\KeyForge.Domain\KeyForge.Domain.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
-    <PackageReference Include="System.Text.Json" Version="8.0.0" />
   </ItemGroup>
 
 </Project>
