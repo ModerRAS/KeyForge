@@ -1,3 +1,5 @@
+using KeyForge.Abstractions.Models.Core;
+
 namespace KeyForge.Abstractions.Interfaces.HAL
 {
     /// <summary>

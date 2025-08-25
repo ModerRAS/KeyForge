@@ -1,4 +1,7 @@
 using KeyForge.Abstractions.Models.Configuration;
+using KeyForge.Abstractions.Models.Core;
+using KeyForge.Abstractions.Models.Application;
+using Microsoft.Extensions.Configuration;
 
 namespace KeyForge.Abstractions.Interfaces.Core
 {

@@ -1,3 +1,5 @@
+using KeyForge.Abstractions.Models.Application;
+
 namespace KeyForge.Abstractions.Interfaces.Application
 {
     /// <summary>

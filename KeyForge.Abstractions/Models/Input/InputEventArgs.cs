@@ -1,3 +1,5 @@
+using KeyForge.Abstractions.Models.Input;
+
 namespace KeyForge.Abstractions.Models.Input
 {
     /// <summary>

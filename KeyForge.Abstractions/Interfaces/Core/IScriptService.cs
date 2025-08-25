@@ -1,4 +1,6 @@
 using KeyForge.Abstractions.Models.Script;
+using KeyForge.Abstractions.Models.Core;
+using KeyForge.Abstractions.Models.Application;
 
 namespace KeyForge.Abstractions.Interfaces.Core
 {
