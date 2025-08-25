@@ -1,7 +1,6 @@
 using KeyForge.Abstractions.Interfaces.Core;
 using KeyForge.Abstractions.Interfaces.HAL;
 using KeyForge.Core.Services;
-using KeyForge.HAL.Windows.Input;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace KeyForge.Core.Extensions
@@ -33,11 +32,7 @@ namespace KeyForge.Core.Extensions
         /// </summary>
         private static IServiceCollection AddHALServices(this IServiceCollection services)
         {
-            // 注册输入HAL
-            services.AddSingleton<IKeyboardHAL, WindowsKeyboardHAL>();
-            services.AddSingleton<IMouseHAL, WindowsMouseHAL>();
-            
-            // 可以根据平台动态注册不同的HAL实现
+            // 注册HAL接口 - 具体实现由平台特定项目提供
             // services.AddSingleton<IKeyboardHAL>(sp => 
             // {
             //     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -48,6 +43,9 @@ namespace KeyForge.Core.Extensions
             //         throw new PlatformNotSupportedException("不支持的操作系统");
             // });
             
+            // 注意：实际使用时，需要在平台特定项目中注册HAL实现
+            // 例如：在Windows平台项目中注册WindowsKeyboardHAL和WindowsMouseHAL
+            
             return services;
         }
 
@@ -56,9 +54,10 @@ namespace KeyForge.Core.Extensions
         /// </summary>
         private static IServiceCollection AddCoreServices(this IServiceCollection services)
         {
-            // 注册输入服务
-            services.AddSingleton<IKeyboardService, KeyboardService>();
-            services.AddSingleton<IMouseService, MouseService>();
+            // 注册核心服务接口 - 具体实现依赖于HAL
+            // 注意：这些服务需要在HAL实现注册之后才能正常工作
+            // services.AddSingleton<IKeyboardService, KeyboardService>();
+            // services.AddSingleton<IMouseService, MouseService>();
             
             // 可以注册其他核心服务
             // services.AddSingleton<IImageService, ImageService>();

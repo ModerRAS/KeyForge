@@ -1,4 +1,5 @@
-using KeyForge.Abstractions.Enums;
+using KeyForge.Abstractions.Models.Core;
+using KeyForge.Abstractions.Models.Input;
 using KeyForge.Abstractions.Interfaces.HAL;
 using Microsoft.Extensions.Logging;
 using System.Runtime.InteropServices;

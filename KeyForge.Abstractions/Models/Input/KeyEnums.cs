@@ -82,7 +82,17 @@ namespace KeyForge.Abstractions.Models.Input
         /// <summary>
         /// 键按下
         /// </summary>
-        Pressed = 1
+        Pressed = 1,
+        
+        /// <summary>
+        /// 键按下（别名）
+        /// </summary>
+        Down = 1,
+        
+        /// <summary>
+        /// 键释放（别名）
+        /// </summary>
+        Up = 0
     }
     
     /// <summary>
@@ -137,6 +147,16 @@ namespace KeyForge.Abstractions.Models.Input
         Pressed = 1,
         
         /// <summary>
+        /// 按下（别名）
+        /// </summary>
+        Down = 1,
+        
+        /// <summary>
+        /// 释放（别名）
+        /// </summary>
+        Up = 0,
+        
+        /// <summary>
         /// 双击
         /// </summary>
         DoubleClicked = 2
@@ -158,18 +178,23 @@ namespace KeyForge.Abstractions.Models.Input
         Double = 1,
         
         /// <summary>
+        /// 三击
+        /// </summary>
+        Triple = 2,
+        
+        /// <summary>
         /// 右击
         /// </summary>
-        Right = 2,
+        Right = 3,
         
         /// <summary>
         /// 中击
         /// </summary>
-        Middle = 3,
+        Middle = 4,
         
         /// <summary>
         /// 长按
         /// </summary>
-        Long = 4
+        Long = 5
     }
 }

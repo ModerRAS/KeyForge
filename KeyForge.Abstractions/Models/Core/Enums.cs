@@ -19,34 +19,44 @@ namespace KeyForge.Abstractions.Models.Core
         Initializing = 1,
         
         /// <summary>
+        /// 正在启动
+        /// </summary>
+        Starting = 2,
+        
+        /// <summary>
         /// 已就绪
         /// </summary>
-        Ready = 2,
+        Ready = 3,
         
         /// <summary>
         /// 正在运行
         /// </summary>
-        Running = 3,
+        Running = 4,
         
         /// <summary>
         /// 已暂停
         /// </summary>
-        Paused = 4,
+        Paused = 5,
+        
+        /// <summary>
+        /// 正在停止
+        /// </summary>
+        Stopping = 6,
         
         /// <summary>
         /// 已停止
         /// </summary>
-        Stopped = 5,
+        Stopped = 7,
         
         /// <summary>
         /// 错误状态
         /// </summary>
-        Error = 6,
+        Error = 8,
         
         /// <summary>
         /// 已销毁
         /// </summary>
-        Disposed = 7
+        Disposed = 9
     }
     
     /// <summary>

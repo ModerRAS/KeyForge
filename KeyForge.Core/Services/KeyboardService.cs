@@ -1,4 +1,4 @@
-using KeyForge.Abstractions.Enums;
+using KeyForge.Abstractions.Models.Core;
 using KeyForge.Abstractions.Interfaces.Core;
 using KeyForge.Abstractions.Interfaces.HAL;
 using KeyForge.Abstractions.Models.Input;
