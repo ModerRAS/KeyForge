@@ -1,194 +1,137 @@
 #!/bin/bash
 
-# KeyForge GitHub Actions 验证脚本
-# 用于验证所有GitHub Actions工作流配置是否正确
+# GitHub Actions 验证脚本
+# 用于验证 GitHub Actions 配置修复是否正确
 
-echo "🔍 KeyForge GitHub Actions 验证脚本"
-echo "========================================="
+echo "🔍 GitHub Actions 配置验证脚本"
+echo "================================="
 
-# 检查必要的工作流文件
-workflows=(
-    "build-and-test.yml"
-    "uat-testing.yml"
-    "code-quality.yml"
-    "release.yml"
-    "merge-and-deploy.yml"
-    "test-github-actions.yml"
+# 颜色定义
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# 检查函数
+check_file() {
+    if [ -f "$1" ]; then
+        echo -e "${GREEN}✓${NC} $1 存在"
+        return 0
+    else
+        echo -e "${RED}✗${NC} $1 不存在"
+        return 1
+    fi
+}
+
+check_version() {
+    local file="$1"
+    local expected_version="$2"
+    
+    # 检查直接使用的版本
+    if grep -q "dotnet-version: '$expected_version'" "$file"; then
+        echo -e "${GREEN}✓${NC} $file 使用正确的 .NET 版本: $expected_version"
+        return 0
+    # 检查环境变量方式
+    elif grep -q "DOTNET_VERSION: '$expected_version'" "$file"; then
+        echo -e "${GREEN}✓${NC} $file 使用正确的 .NET 环境变量版本: $expected_version"
+        return 0
+    # 检查矩阵方式
+    elif grep -q "dotnet-version: \[$expected_version\]" "$file"; then
+        echo -e "${GREEN}✓${NC} $file 使用正确的 .NET 矩阵版本: $expected_version"
+        return 0
+    else
+        echo -e "${RED}✗${NC} $file .NET 版本不正确或未找到"
+        return 1
+    fi
+}
+
+check_artifact_version() {
+    local file="$1"
+    local expected_version="$2"
+    
+    if grep -q "actions/upload-artifact@$expected_version" "$file"; then
+        echo -e "${GREEN}✓${NC} $file 使用正确的 upload-artifact 版本: $expected_version"
+        return 0
+    else
+        echo -e "${RED}✗${NC} $file upload-artifact 版本不正确或未找到"
+        return 1
+    fi
+}
+
+check_download_artifact_version() {
+    local file="$1"
+    local expected_version="$2"
+    
+    if grep -q "actions/download-artifact@$expected_version" "$file"; then
+        echo -e "${GREEN}✓${NC} $file 使用正确的 download-artifact 版本: $expected_version"
+        return 0
+    else
+        echo -e "${RED}✗${NC} $file download-artifact 版本不正确或未找到"
+        return 1
+    fi
+}
+
+echo ""
+echo "📋 检查 GitHub Actions 工作流文件..."
+echo ""
+
+# 检查所有工作流文件
+workflow_files=(
+    ".github/workflows/uat-testing.yml"
+    ".github/workflows/ci-cd.yml"
+    ".github/workflows/build-and-test.yml"
+    ".github/workflows/merge-and-deploy.yml"
+    ".github/workflows/release.yml"
 )
 
-echo "📋 检查工作流文件..."
-for workflow in "${workflows[@]}"; do
-    if [ -f ".github/workflows/$workflow" ]; then
-        echo "✅ $workflow - 存在"
-    else
-        echo "❌ $workflow - 缺失"
-        exit 1
-    fi
-done
+total_checks=0
+passed_checks=0
 
-# 检查解决方案文件
-echo ""
-echo "📦 检查项目文件..."
-if [ -f "KeyForge-Simplified.sln" ]; then
-    echo "✅ 解决方案文件存在"
-else
-    echo "❌ 解决方案文件缺失"
-    exit 1
-fi
-
-# 检查README徽章
-echo ""
-echo "🏷️ 检查README徽章..."
-badge_count=$(grep -c "github.com/ModerRAS/KeyForge/actions/workflows" README.md)
-if [ $badge_count -ge 4 ]; then
-    echo "✅ GitHub Actions徽章已配置 ($badge_count个)"
-else
-    echo "⚠️  GitHub Actions徽章可能不完整 ($badge_count个)"
-fi
-
-# 检查文档文件
-echo ""
-echo "📚 检查文档文件..."
-docs=(
-    "README.md"
-    "docs/README.md"
-    "docs/CLAUDE.md"
-    "docs/ci-cd/README.md"
-    "docs/ci-cd/complete-guide.md"
-    "docs/ci-cd/quick-reference.md"
-    "CLAUDE.md"
-)
-
-for doc in "${docs[@]}"; do
-    if [ -f "$doc" ]; then
-        echo "✅ $doc - 存在"
-    else
-        echo "❌ $doc - 缺失"
-    fi
-done
-
-# 验证YAML语法
-echo ""
-echo "🔧 验证YAML语法..."
-for workflow in "${workflows[@]}"; do
-    if command -v yq &> /dev/null; then
-        if yq eval ".github/workflows/$workflow" > /dev/null 2>&1; then
-            echo "✅ $workflow - YAML语法正确"
+for file in "${workflow_files[@]}"; do
+    echo -e "${YELLOW}检查 $file${NC}"
+    
+    if check_file "$file"; then
+        ((total_checks++))
+        ((passed_checks++))
+        
+        # 检查 .NET 版本
+        ((total_checks++))
+        if check_version "$file" "9.0.x"; then
+            ((passed_checks++))
+        fi
+        
+        # 检查 upload-artifact 版本
+        ((total_checks++))
+        if check_artifact_version "$file" "v4"; then
+            ((passed_checks++))
+        fi
+        
+        # 只检查实际需要 download-artifact 的文件
+        if [[ "$file" == *release.yml ]]; then
+            ((total_checks++))
+            if check_download_artifact_version "$file" "v4"; then
+                ((passed_checks++))
+            fi
         else
-            echo "❌ $workflow - YAML语法错误"
+            echo -e "${GREEN}✓${NC} $file 不需要 download-artifact"
         fi
     else
-        echo "⚠️  yq命令不可用，跳过YAML验证"
-        break
+        ((total_checks++))
     fi
-done
-
-# 检查.NET SDK
-echo ""
-echo "🖥️  检查.NET SDK..."
-if command -v dotnet &> /dev/null; then
-    dotnet_version=$(dotnet --version)
-    echo "✅ .NET SDK已安装: $dotnet_version"
     
-    # 检查项目还原
-    echo "📦 检查项目依赖..."
-    if dotnet restore KeyForge-Simplified.sln --verbosity quiet; then
-        echo "✅ 项目依赖还原成功"
-    else
-        echo "❌ 项目依赖还原失败"
-    fi
+    echo ""
+done
+
+echo "📊 检查结果摘要"
+echo "================"
+echo "总检查项: $total_checks"
+echo "通过项: $passed_checks"
+echo "失败项: $((total_checks - passed_checks))"
+
+if [ $passed_checks -eq $total_checks ]; then
+    echo -e "${GREEN}🎉 所有检查都通过了！GitHub Actions 配置修复成功。${NC}"
+    exit 0
 else
-    echo "⚠️  .NET SDK未安装，跳过项目检查"
+    echo -e "${RED}❌ 有 $((total_checks - passed_checks)) 个检查失败，需要修复。${NC}"
+    exit 1
 fi
-
-# 生成验证报告
-echo ""
-echo "📊 生成验证报告..."
-report_file="github-actions-validation-report.md"
-cat > "$report_file" << EOF
-# GitHub Actions 验证报告
-
-## 验证时间
-$(date)
-
-## 验证结果
-
-### 工作流文件
-EOF
-
-for workflow in "${workflows[@]}"; do
-    if [ -f ".github/workflows/$workflow" ]; then
-        echo "- ✅ $workflow" >> "$report_file"
-    else
-        echo "- ❌ $workflow" >> "$report_file"
-    fi
-done
-
-cat >> "$report_file" << EOF
-
-### 项目文件
-- ✅ 解决方案文件: KeyForge-Simplified.sln
-- ✅ README徽章: $badge_count个
-
-### 文档文件
-EOF
-
-for doc in "${docs[@]}"; do
-    if [ -f "$doc" ]; then
-        echo "- ✅ $doc" >> "$report_file"
-    else
-        echo "- ❌ $doc" >> "$report_file"
-    fi
-done
-
-if command -v dotnet &> /dev/null; then
-    cat >> "$report_file" << EOF
-
-### 开发环境
-- ✅ .NET SDK: $(dotnet --version)
-- ✅ 项目依赖: 已还原
-EOF
-fi
-
-cat >> "$report_file" << EOF
-
-## 下一步操作
-
-1. 提交所有更改到GitHub仓库
-2. 验证GitHub Actions工作流是否正常运行
-3. 检查所有工作流的执行状态
-4. 根据需要调整配置
-
-## 文件位置
-
-- 工作流配置: \`.github/workflows/\`
-- 完整指南: \`docs/ci-cd/complete-guide.md\`
-- 快速参考: \`docs/ci-cd/quick-reference.md\`
-- 详细说明: \`docs/ci-cd/README.md\`
-- 文档导航: \`docs/README.md\`
-- 文档管理: \`docs/CLAUDE.md\`
-- 文件规范: \`CLAUDE.md\`
-
----
-
-*此报告由验证脚本自动生成*
-EOF
-
-echo "✅ 验证报告已生成: $report_file"
-
-# 最终状态
-echo ""
-echo "🎉 验证完成！"
-echo ""
-echo "📋 下一步操作:"
-echo "1. 提交代码到GitHub仓库"
-echo "2. 检查GitHub Actions工作流状态"
-echo "3. 创建测试标签验证发布流程"
-echo "4. 查看验证报告了解详细信息"
-echo ""
-echo "🔗 有用链接:"
-echo "- GitHub Actions: https://github.com/ModerRAS/KeyForge/actions"
-echo "- 完整指南: docs/ci-cd/complete-guide.md"
-echo "- 快速参考: docs/ci-cd/quick-reference.md"
-echo "- 文档导航: docs/README.md"
-echo "- 文档管理: docs/CLAUDE.md"
