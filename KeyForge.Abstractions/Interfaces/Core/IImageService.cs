@@ -1,6 +1,7 @@
 using KeyForge.Abstractions.Models.Image;
 using KeyForge.Abstractions.Models.Core;
 using KeyForge.Abstractions.Models.Application;
+using KeyForge.Abstractions.Models.Input;
 
 namespace KeyForge.Abstractions.Interfaces.Core
 {

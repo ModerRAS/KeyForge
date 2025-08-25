@@ -1,4 +1,5 @@
 using KeyForge.Abstractions.Models.Input;
+using KeyForge.Abstractions.Models.Script;
 
 namespace KeyForge.Abstractions.Models.Input
 {

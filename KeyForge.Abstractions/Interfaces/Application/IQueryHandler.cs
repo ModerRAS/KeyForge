@@ -285,8 +285,43 @@ namespace KeyForge.Abstractions.Interfaces.Application
     }
     
     // 查询结果定义（简化示例）
-    public record InputQueryResult : IQueryResult;
-    public record ImageQueryResult : IQueryResult;
-    public record ScriptQueryResult : IQueryResult;
-    public record ConfigurationQueryResult : IQueryResult;
+    public record InputQueryResult : IQueryResult
+    {
+        public bool Success { get; init; }
+        public string ErrorMessage { get; init; } = string.Empty;
+        public string ErrorCode { get; init; } = string.Empty;
+        public object Data { get; init; }
+        public int TotalCount { get; init; }
+        public Dictionary<string, object> Metadata { get; init; } = new();
+    }
+    
+    public record ImageQueryResult : IQueryResult
+    {
+        public bool Success { get; init; }
+        public string ErrorMessage { get; init; } = string.Empty;
+        public string ErrorCode { get; init; } = string.Empty;
+        public object Data { get; init; }
+        public int TotalCount { get; init; }
+        public Dictionary<string, object> Metadata { get; init; } = new();
+    }
+    
+    public record ScriptQueryResult : IQueryResult
+    {
+        public bool Success { get; init; }
+        public string ErrorMessage { get; init; } = string.Empty;
+        public string ErrorCode { get; init; } = string.Empty;
+        public object Data { get; init; }
+        public int TotalCount { get; init; }
+        public Dictionary<string, object> Metadata { get; init; } = new();
+    }
+    
+    public record ConfigurationQueryResult : IQueryResult
+    {
+        public bool Success { get; init; }
+        public string ErrorMessage { get; init; } = string.Empty;
+        public string ErrorCode { get; init; } = string.Empty;
+        public object Data { get; init; }
+        public int TotalCount { get; init; }
+        public Dictionary<string, object> Metadata { get; init; } = new();
+    }
 }

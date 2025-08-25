@@ -320,8 +320,39 @@ namespace KeyForge.Abstractions.Interfaces.Application
     }
     
     // 命令结果定义（简化示例）
-    public record InputCommandResult : ICommandResult;
-    public record ImageCommandResult : ICommandResult;
-    public record ScriptCommandResult : ICommandResult;
-    public record ConfigurationCommandResult : ICommandResult;
+    public record InputCommandResult : ICommandResult
+    {
+        public bool Success { get; init; }
+        public string ErrorMessage { get; init; } = string.Empty;
+        public string ErrorCode { get; init; } = string.Empty;
+        public object Data { get; init; }
+        public Dictionary<string, object> Metadata { get; init; } = new();
+    }
+    
+    public record ImageCommandResult : ICommandResult
+    {
+        public bool Success { get; init; }
+        public string ErrorMessage { get; init; } = string.Empty;
+        public string ErrorCode { get; init; } = string.Empty;
+        public object Data { get; init; }
+        public Dictionary<string, object> Metadata { get; init; } = new();
+    }
+    
+    public record ScriptCommandResult : ICommandResult
+    {
+        public bool Success { get; init; }
+        public string ErrorMessage { get; init; } = string.Empty;
+        public string ErrorCode { get; init; } = string.Empty;
+        public object Data { get; init; }
+        public Dictionary<string, object> Metadata { get; init; } = new();
+    }
+    
+    public record ConfigurationCommandResult : ICommandResult
+    {
+        public bool Success { get; init; }
+        public string ErrorMessage { get; init; } = string.Empty;
+        public string ErrorCode { get; init; } = string.Empty;
+        public object Data { get; init; }
+        public Dictionary<string, object> Metadata { get; init; } = new();
+    }
 }
